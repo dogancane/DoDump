@@ -168,6 +168,7 @@ p.ok { color: var(--st-green); margin: 0; }
 #readout { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 4px 8px; font: 500 13px var(--font-mono); font-variant-numeric: tabular-nums; }
 #readout em { display: block; font: normal 10px var(--font-body); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
 #readout .warnc { color: var(--st-orange); }
+.bgnote { margin: 8px 0 0; padding: 6px 10px; border-left: 4px solid var(--accent); background: var(--panel-2); font-size: 13px; }
 .lg-wl { display: inline-block; width: 22px; height: 0; border-top: 2px solid #2a8bd6; vertical-align: middle; margin: 0 4px; }
 .lg-wl.dash { border-top-style: dashed; }
 .dumped { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0; }
@@ -296,7 +297,7 @@ table.matrix td.selc { outline: 2px solid var(--accent); outline-offset: -2px; }
   <header class="top">
     <div class="brand">
       <h1 class="logo"><svg class="logo-rock" viewBox="0 0 32 32" aria-hidden="true"><polygon points="3.5,21 7,11 15,5.5 25,7.5 29,17 25,26.5 12,27.5" fill="var(--accent)"/><polygon points="7,11 15,5.5 25,7.5 20.5,14 10,15" fill="#ffffff" opacity="0.35"/><polygon points="25,7.5 29,17 25,26.5 20.5,14" fill="#000000" opacity="0.22"/></svg><span class="logo-text"><span class="logo-do">Do</span><span>Dump</span></span></h1>
-      <span class="level" title="See the Method tab">V2.7, level 2 of 3: quasi-2D DEM. Validated in 2D only.</span>
+      <span class="level" title="See the Method tab">V2.8, level 2 of 3: quasi-2D DEM. Validated in 2D only.</span>
     </div>
     <nav class="tabs" aria-label="Pages">
       <button type="button" data-tab="sim" aria-selected="true">Simulate</button>
@@ -381,6 +382,7 @@ table.matrix td.selc { outline: 2px solid var(--accent); outline-offset: -2px; }
       <div class="live">
         <div style="display:flex;flex-direction:column;gap:8px">
           <div id="statusPill" class="pill stw"><b>READY</b><span>Press Start</span></div>
+          <p id="bgNote" class="msg ok bgnote" hidden></p>
           <div id="dumped" class="dumped"></div>
           <div id="readout"></div>
           <div id="reasons"></div>
@@ -560,7 +562,7 @@ table.matrix td.selc { outline: 2px solid var(--accent); outline-offset: -2px; }
           </ul>
 
           <h3>Water effect (scour-protection dumping through the moonpool)</h3>
-          <p>The fall pipe hangs through the moonpool and is open to the sea at the bottom. Its top is above the water surface in the moonpool (input "Pipe top above water", default 6 m). In the coupled water model:</p>
+          <p>The fall pipe hangs through the moonpool and is open to the sea at the bottom. Its top is above the water surface in the moonpool (input "Pipe top above water", default 6 m). This applies to the moonpool bucket string only; the side-deployed inclined pipe has no moonpool and is modelled with a submerged inlet. In the coupled water model:</p>
           <ul>
             <li><b>Dry part in the moonpool.</b> Above the water surface the stones fall in air: full weight, no buoyancy, no added mass, air drag only (rho 1.2 kg/m3). They reach the water at <code>v = sqrt(v0^2 + 2 g H)</code>, about 11 m/s after 6 m, well above their terminal velocity in water, and are braked by drag below the surface.</li>
             <li><b>Free surface inside the pipe.</b> No water can enter through the top, so the inside water surface is free (atmospheric) and is drawn down below the moonpool level when the rock pulls water downward: <code>p' = -rho g z</code> at the surface, <code>dz/dt = Q_top / A</code>. Through-flow is then fed only by the leaky joints. With sealed joints there is no steady flow, and the level drops until <code>rho g z A</code> carries the rock drag on the water column. Joints above the moonpool water level exchange air and are excluded. Setting the input to 0 gives a submerged inlet with entrance loss K_in.</li>
