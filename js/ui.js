@@ -74,7 +74,7 @@
       { k: 'pipe.inclined.t', label: 'Wall thickness', unit: 'mm', show: isI },
       { k: 'pipe.inclined.mat', label: 'Pipe material', type: 'select', opts: matOpts, show: isI },
       { k: 'pipe.feedLen', label: 'Feed chute length', unit: 'mm', help: 'Straight chute upstream of the DEM window inlet where stones are released.' },
-      { k: 'pipe.dryLen', label: 'Pipe top above water (moonpool)', unit: 'm', scale: 1000, show: c => c.physics.fluid, help: 'Vertical height from the pipe top to the water surface in the moonpool. Stones fall in air over this height (full weight, no buoyancy or water drag) and hit the water surface at speed. Inside the pipe the water surface is free and can be drawn down below the outside water level by the falling rock. 0 = pipe top submerged.' }
+      { k: 'pipe.dryLen', label: 'Pipe top above water (moonpool)', unit: 'm', scale: 1000, show: c => c.physics.fluid && c.pipe.type === 'bucket', help: 'Vertical height from the pipe top to the water surface in the moonpool. Stones fall in air over this height (full weight, no buoyancy or water drag) and hit the water surface at speed. Inside the pipe the water surface is free and can be drawn down below the outside water level by the falling rock. 0 = pipe top submerged.' }
     ],
     shape: [
       { k: '_shapeOnlyBucket', type: 'custom', show: isI },
@@ -408,10 +408,10 @@
     if (S.state !== 'running' && S.state !== 'paused') flushChanges();
     if (!S.eng || S.valid.errors.length) return;
     if (S.state === 'done' || S.pending) reset();
-    S.state = 'running'; S.lastFrame = performance.now(); updateButtons();
+    S.state = 'running'; S.lastFrame = performance.now(); updateButtons(); bgStart();
   }
   function pause() { if (S.state === 'running') { S.state = 'paused'; updateButtons(); drawAll(true); } }
-  function resume() { if (S.state === 'paused') { S.state = 'running'; S.lastFrame = performance.now(); updateButtons(); } }
+  function resume() { if (S.state === 'paused') { S.state = 'running'; S.lastFrame = performance.now(); updateButtons(); bgStart(); } }
   function stopNow() { if (S.state === 'running' || S.state === 'paused') finish(); }
   function stepOnce() {
     if (!S.eng || S.state === 'running' || S.state === 'done') return;
@@ -432,20 +432,67 @@
     updateButtons(); drawAll(true);
   }
 
+  /** Advance the running simulation by the real time since the last call (budget in ms of compute). */
+  function advance(now, budget, maxReal) {
+    if (S.state !== 'running' || !S.eng) return false;
+    const real = Math.min(maxReal, Math.max(0, (now - S.lastFrame) / 1000)); S.lastFrame = now;
+    const ts = cfg.run.timeScale;
+    const target = ts > 0 ? S.eng.t + real * ts : Infinity;
+    const t0 = performance.now(), tStart = S.eng.t, T = S.runCfg.run.duration;
+    while (S.eng.t < target && S.eng.t < T && performance.now() - t0 < budget) {
+      for (let i = 0; i < 20 && S.eng.t < target && S.eng.t < T; i++) { S.eng.step(); S.det.maybeSample(); }
+    }
+    S.simRate = S.simRate * 0.9 + 0.1 * (real > 0 ? (S.eng.t - tStart) / real : 0);
+    if (S.eng.t >= T) finish();
+    return true;
+  }
+
   function loop(now) {
     requestAnimationFrame(loop);
-    if (S.state === 'running' && S.eng) {
-      const real = Math.min(0.1, (now - S.lastFrame) / 1000); S.lastFrame = now;
-      const ts = cfg.run.timeScale;
-      const target = ts > 0 ? S.eng.t + real * ts : Infinity;
-      const t0 = performance.now(), tStart = S.eng.t, T = S.runCfg.run.duration;
-      while (S.eng.t < target && S.eng.t < T && performance.now() - t0 < 14) {
-        for (let i = 0; i < 20 && S.eng.t < target && S.eng.t < T; i++) { S.eng.step(); S.det.maybeSample(); }
-      }
-      S.simRate = S.simRate * 0.9 + 0.1 * (real > 0 ? (S.eng.t - tStart) / real : 0);
-      if (S.eng.t >= T) finish();
-      drawAll(false);
+    BG.lastRaf = now;
+    if (BG.from) bgReturn();                // first frame after a background period
+    if (advance(now, 14, 0.1)) drawAll(false);
+  }
+
+  /* ---- background running ----
+   * Browsers stop requestAnimationFrame in hidden tabs (and slow it for minimised
+   * or covered windows). While a run is active a worker clock ticks every 50 ms;
+   * when no frame has been drawn for 250 ms the tick advances the simulation
+   * instead, so the run keeps going in the background. */
+  const BG = { worker: null, from: null, title: document.title || 'DoDump', lastTitle: 0, lastRaf: 0 };
+  function bgTick() {
+    const now = performance.now();
+    if (S.state !== 'running') { bgStop(); return; }
+    if (now - BG.lastRaf < 250) return;     // frames are running: the normal loop does the work
+    if (!BG.from) BG.from = { t: S.eng.t, wall: Date.now() };
+    advance(now, 40, 0.25);
+    if (now - BG.lastTitle > 1000) {
+      BG.lastTitle = now;
+      const T = S.runCfg.run.duration;
+      document.title = S.state === 'done' ? 'Done: ' + BG.title : clock(S.eng.t) + ' / ' + clock(T) + ' (' + Math.floor(100 * S.eng.t / T) + ' %) ' + BG.title;
     }
+  }
+  function bgStart() {
+    try {
+      if (!BG.worker) { BG.worker = new Worker('js/ticker.js'); BG.worker.onmessage = bgTick; }
+      BG.worker.postMessage('start');
+    } catch (e) { BG.worker = null; }   // no worker support: the run pauses while hidden, as before
+  }
+  function bgStop() { if (BG.worker) BG.worker.postMessage('stop'); }
+  function bgReturn() {
+    document.title = BG.title;
+    S.lastFrame = performance.now();
+    if (S.eng) {
+      const dt = S.eng.t - BG.from.t, away = (Date.now() - BG.from.wall) / 1000;
+      if (dt > 1 && away > 3) showBgNote('Kept running in the background: ' + clock(BG.from.t) + ' to ' + clock(S.eng.t) + ' simulated while the tab was hidden (' + clock(away) + ')' + (S.state === 'done' ? '. Run finished.' : '.'));
+    }
+    BG.from = null;
+    drawAll(true);
+  }
+  function showBgNote(msg) {
+    const el = $('#bgNote'); if (!el) return;
+    el.textContent = msg; el.hidden = false;
+    clearTimeout(BG.noteT); BG.noteT = setTimeout(() => { el.hidden = true; }, 10000);
   }
 
   function drawAll(forceCharts) {

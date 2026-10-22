@@ -68,7 +68,7 @@
       minPass = I.d; inletW = I.d;
     }
     pos(cfg.pipe.feedLen, 'Feed chute length');
-    if (!(cfg.pipe.dryLen >= 0)) E.push('Pipe top above water must be zero or positive.');
+    if (cfg.pipe.type === 'bucket' && !(cfg.pipe.dryLen >= 0)) E.push('Pipe top above water must be zero or positive.');
     if (cfg.pipe.type === 'bucket' && cfg.pipe.shape && cfg.pipe.shape.mode !== 'vertical') {
       const sh = cfg.pipe.shape, R = sh.rov || {};
       if (sh.mode === 'tilt' || sh.mode === 'joints') {
@@ -86,9 +86,7 @@
       }
       if (!(sh.topLimit > 0)) E.push('Allowed angle in the moonpool must be positive.');
     }
-    else if (cfg.physics.fluid && cfg.pipe.dryLen > 0) {
-      const Ltot = cfg.pipe.type === 'bucket' ? null : cfg.pipe.inclined.L;
-      if (Ltot && cfg.pipe.dryLen >= Ltot) E.push('Pipe top above water is longer than the pipe: no part of the pipe is under water.');
+    if (cfg.physics.fluid && cfg.pipe.type === 'bucket' && cfg.pipe.dryLen > 0) {
       if (cfg.pipe.dryLen > 20000) W.push('Pipe top more than 20 m above the water: check the moonpool input.');
     }
 

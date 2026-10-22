@@ -151,7 +151,7 @@
 
     // Dry part (moonpool): pipe top above the water surface. Stones fall in air there.
     const sinA = Math.max(0.05, Math.sin(geom.axisAngleH));
-    const dryV = fluid ? Math.max(0, (cfg.pipe.dryLen || 0) / 1000) : 0;        // vertical [m]
+    const dryV = fluid && cfg.pipe.type === 'bucket' ? Math.max(0, (cfg.pipe.dryLen || 0) / 1000) : 0; // vertical [m]; moonpool only (side pipe: submerged inlet)
     const cosTop = geom.shape && geom.shape.active ? Math.cos(geom.shape.thetaAt(0)) : 1;
     const sDryG = dryV / (sinA * cosTop);                                        // along the axis, global [m]
     const sDryWin = Math.max(0, Math.min(geom.L, sDryG - (geom.s0Global || 0))); // dry length inside the DEM window

@@ -95,7 +95,7 @@
     // ---- dry part in the moonpool: water surface below the pipe top ----
     // sW = axial position of the outside water surface (sea level in the moonpool).
     // Segments above it carry air and are removed; their joint gaps exchange air, not water.
-    const dryV = P.fluid ? Math.max(0, (cfg.pipe.dryLen || 0) / 1000) : 0;
+    const dryV = P.fluid && cfg.pipe.type === 'bucket' ? Math.max(0, (cfg.pipe.dryLen || 0) / 1000) : 0; // moonpool string only
     const shp = geom.shape && geom.shape.active ? geom.shape : null;
     this.cosTop = shp ? Math.cos(shp.thetaAt(0)) : 1;               // tilt of the top link (moonpool)
     this.sW = Math.min(this.LtotFull, dryV / Math.max(0.05, this.sinA * this.cosTop));
