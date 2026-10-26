@@ -196,8 +196,10 @@
       if (WT.on && Math.abs(WT.surfS - WT.sW) > 0.02) lines.push([WT.surfS - s0g, []]);
       lines.forEach(([sl, dash]) => {
         if (sl < -g.feedLen || sl > g.L) return;
-        const w1 = g.widthAt(Math.max(0, sl)) / 2 + (dash.length ? 0.6 : 0);
-        const a = g.toWorld(sl, -w1), b = g.toWorld(sl, w1);
+        // water surfaces are horizontal: chord across the (possibly inclined) pipe at the axis point
+        const c0 = g.toWorld(sl, 0), sh = Math.max(0.2, Math.abs(Math.sin(g.axisAngleH)));
+        const hw = g.widthAt(Math.max(0, sl)) / 2 / sh + (dash.length ? 0.6 : 0);
+        const a = [c0[0] - hw, c0[1]], b = [c0[0] + hw, c0[1]];
         ctx.setLineDash(dash); ctx.strokeStyle = WATER; ctx.lineWidth = 2 * px;
         ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); ctx.setLineDash([]);
       });
@@ -347,9 +349,9 @@
     if (eng && eng.water && eng.water.freeSurface) {
       const WT = eng.water, s0g = g.s0Global || 0;
       ctx.textAlign = 'left'; ctx.fillStyle = WATER;
-      const lab = (sl, t) => { if (sl < -g.feedLen || sl > g.L) return; const p = this.toScreen.apply(this, g.toWorld(sl, g.widthAt(Math.max(0, sl)) / 2 + 0.65)); ctx.fillText(t, p[0] + 4, p[1]); };
-      lab(WT.sW - s0g, 'Water level (moonpool)');
-      if (WT.on && Math.abs(WT.surfS - WT.sW) > 0.02) lab(WT.surfS - s0g, 'Water level in pipe (' + (WT.z >= 0 ? '-' : '+') + Math.abs(WT.z).toFixed(2) + ' m)');
+      const lab = (sl, t, dy) => { if (sl < -g.feedLen || sl > g.L) return; const c0 = g.toWorld(sl, 0), sh = Math.max(0.2, Math.abs(Math.sin(g.axisAngleH))); const p = this.toScreen(c0[0] + g.widthAt(Math.max(0, sl)) / 2 / sh + 0.65, c0[1]); ctx.fillText(t, p[0] + 4, p[1] + (dy || 0)); };
+      lab(WT.sW - s0g, g.string ? 'Water level (moonpool)' : 'Water level (sea)');
+      if (WT.on && Math.abs(WT.surfS - WT.sW) > 0.02) { const close = Math.abs(WT.surfS - WT.sW) * Math.abs(Math.sin(g.axisAngleH)) * this.scale < 14; lab(WT.surfS - s0g, 'Water level in pipe (' + (WT.z >= 0 ? '-' : '+') + Math.abs(WT.z).toFixed(2) + ' m)', close ? 14 : 0); }
       ctx.fillStyle = C.muted;
     }
     if (arch) {

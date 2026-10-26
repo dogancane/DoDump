@@ -68,7 +68,7 @@
       minPass = I.d; inletW = I.d;
     }
     pos(cfg.pipe.feedLen, 'Feed chute length');
-    if (cfg.pipe.type === 'bucket' && !(cfg.pipe.dryLen >= 0)) E.push('Pipe top above water must be zero or positive.');
+    if (!(cfg.pipe.dryLen >= 0)) E.push('Pipe top above water must be zero or positive.');
     if (cfg.pipe.type === 'bucket' && cfg.pipe.shape && cfg.pipe.shape.mode !== 'vertical') {
       const sh = cfg.pipe.shape, R = sh.rov || {};
       if (sh.mode === 'tilt' || sh.mode === 'joints') {
@@ -86,8 +86,14 @@
       }
       if (!(sh.topLimit > 0)) E.push('Allowed angle in the moonpool must be positive.');
     }
-    if (cfg.physics.fluid && cfg.pipe.type === 'bucket' && cfg.pipe.dryLen > 0) {
-      if (cfg.pipe.dryLen > 20000) W.push('Pipe top more than 20 m above the water: check the moonpool input.');
+    if (cfg.physics.fluid && cfg.pipe.dryLen > 0) {
+      if (cfg.pipe.dryLen > 20000) W.push('Pipe top more than 20 m above the water: check the input.');
+      if (cfg.pipe.type === 'inclined') {
+        const I = cfg.pipe.inclined, aH = (I.angleRef === 'horizontal' ? I.angle : 90 - I.angle) * Math.PI / 180;
+        const dryAx = cfg.pipe.dryLen / Math.max(0.05, Math.sin(aH));
+        if (dryAx >= I.L) E.push('Pipe top above water (' + (cfg.pipe.dryLen / 1000) + ' m vertical = ' + (dryAx / 1000).toFixed(1) + ' m along the pipe) leaves no part of the ' + (I.L / 1000) + ' m side pipe under water.');
+        else if (dryAx > 0.5 * I.L) W.push('More than half of the side pipe is above water (' + (dryAx / 1000).toFixed(1) + ' of ' + (I.L / 1000) + ' m along the pipe).');
+      }
     }
 
     // Grade
