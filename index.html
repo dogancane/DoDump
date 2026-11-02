@@ -2,10 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
-<meta name="googlebot" content="noindex, nofollow">
-<title>DoDump</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!-- Keep this tool out of search engines and AI crawlers. Respected by Google, Bing, DuckDuckGo, Yandex and others. -->
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex, notranslate">
+<meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+<meta name="bingbot" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="referrer" content="no-referrer">
+<style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>DoDump 3D</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Cpolygon%20points%3D%223.5%2C21%207%2C11%2015%2C5.5%2025%2C7.5%2029%2C17%2025%2C26.5%2012%2C27.5%22%20fill%3D%22%230b6a86%22/%3E%3Cpolygon%20points%3D%227%2C11%2015%2C5.5%2025%2C7.5%2020.5%2C14%2010%2C15%22%20fill%3D%22%23ffffff%22%20opacity%3D%220.35%22/%3E%3Cpolygon%20points%3D%2225%2C7.5%2029%2C17%2025%2C26.5%2020.5%2C14%22%20fill%3D%22%23000000%22%20opacity%3D%220.22%22/%3E%3C/svg%3E">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -289,26 +293,28 @@ table.matrix td.selc { outline: 2px solid var(--accent); outline-offset: -2px; }
   .row { grid-template-columns: minmax(0, 1fr) 140px; }
 }
 @media (prefers-reduced-motion: reduce) { #stBar { transition: none; } }
+
+/* 3D page additions */
+#view { cursor: grab; }
+.viewbar .grpbtn { display: inline-flex; gap: 2px; }
+#noGL { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; text-align: center; color: var(--muted); }
+.brand h1 .dimtag { font: 700 13px/1 var(--font-display); letter-spacing: 0.08em; color: var(--accent-ink); background: var(--accent); padding: 3px 6px; border-radius: 3px; margin-left: 2px; }
 </style>
 </head>
 <body>
-
 <div class="app">
   <header class="top">
     <div class="brand">
-      <h1 class="logo"><svg class="logo-rock" viewBox="0 0 32 32" aria-hidden="true"><polygon points="3.5,21 7,11 15,5.5 25,7.5 29,17 25,26.5 12,27.5" fill="var(--accent)"/><polygon points="7,11 15,5.5 25,7.5 20.5,14 10,15" fill="#ffffff" opacity="0.35"/><polygon points="25,7.5 29,17 25,26.5 20.5,14" fill="#000000" opacity="0.22"/></svg><span class="logo-text"><span class="logo-do">Do</span><span>Dump</span></span></h1>
-      <span class="level" title="See the Method tab">V2.8, level 2 of 3: quasi-2D DEM. Validated in 2D only.</span>
+      <h1 class="logo"><svg class="logo-rock" viewBox="0 0 32 32" aria-hidden="true"><polygon points="3.5,21 7,11 15,5.5 25,7.5 29,17 25,26.5 12,27.5" fill="var(--accent)"/><polygon points="7,11 15,5.5 25,7.5 20.5,14 10,15" fill="#ffffff" opacity="0.35"/><polygon points="25,7.5 29,17 25,26.5 20.5,14" fill="#000000" opacity="0.22"/></svg><span class="logo-text"><span class="logo-do">Do</span><span>Dump</span></span><span class="dimtag">3D</span></h1>
+      <span class="level" title="See the Method tab">3D lab 0.5: full 3D DEM, Hertz-Mindlin contacts, shape-dependent drag, uneven feed and pipe outlet. Trend-checked against 3D silo clogging; not calibrated to rock tests.</span>
     </div>
     <nav class="tabs" aria-label="Pages">
       <button type="button" data-tab="sim" aria-selected="true">Simulate</button>
-      <button type="button" data-tab="grades" aria-selected="false">Grades &amp; data</button>
-      <button type="button" data-tab="string" aria-selected="false">Fall pipe string</button>
       <button type="button" data-tab="prob" aria-selected="false">Probability</button>
       <button type="button" data-tab="results" aria-selected="false">Results</button>
       <button type="button" data-tab="diag" aria-selected="false">Diagnostics</button>
-      <button type="button" data-tab="system" aria-selected="false" hidden>System</button>
       <button type="button" data-tab="method" aria-selected="false" hidden>Method</button>
-      <button type="button" id="adminBtn" class="admin-btn" aria-pressed="false" title="Admin login for the System and Method tabs">Admin</button>
+      <button type="button" id="adminBtn" class="admin-btn" aria-pressed="false" title="Admin login for the Method tab">Admin</button>
     </nav>
     <dialog id="adminDlg" class="admin-dlg">
       <form id="adminForm">
@@ -322,20 +328,22 @@ table.matrix td.selc { outline: 2px solid var(--accent); outline-offset: -2px; }
   </header>
 
   <main>
-    <!-- ================= SIMULATE ================= -->
     <section class="tab" id="tab-sim">
       <aside class="inputs" id="inputs" aria-label="Inputs">
         <details class="grp" open><summary>Geometry</summary><div class="grpbody" id="grp-geom"></div></details>
-        <details class="grp"><summary>Pipe tilt, current and ROV</summary><div class="grpbody" id="grp-shape"></div></details>
         <details class="grp" open><summary>Rock grade and shape</summary><div class="grpbody" id="grp-rock"></div></details>
         <details class="grp" open><summary>Continuous discharge and run</summary><div class="grpbody" id="grp-feed"></div></details>
+        <details class="grp"><summary>Vessel motion</summary><div class="grpbody" id="grp-vessel"></div></details>
         <details class="grp" open><summary>Water effect</summary><div class="grpbody" id="grp-water"></div></details>
         <details class="grp"><summary>Physics <small>provisional values</small></summary><div class="grpbody" id="grp-phys"></div></details>
-        <details class="grp"><summary>Simulation assumptions <small>provisional thresholds</small></summary><div class="grpbody"><p class="note">Detection thresholds and empirical-check constants are not engineering criteria. They are editable settings that decide how simulated behaviour is labelled.</p><div id="grp-det" style="display:flex;flex-direction:column;gap:6px"></div></div></details>
+        <details class="grp"><summary>Simulation assumptions <small>provisional thresholds</small></summary><div class="grpbody"><p class="note">Detection thresholds and empirical-check constants are not engineering criteria. They are editable settings that decide how simulated behaviour is labelled. Solid fractions on this page are volume fractions.</p><div id="grp-det" style="display:flex;flex-direction:column;gap:6px"></div></div></details>
         <details class="grp" open><summary>Checks</summary><div class="grpbody" id="checks"></div></details>
         <details class="grp" open><summary>Analytical and empirical checks</summary><div class="grpbody" id="analytic"></div></details>
         <details class="grp"><summary>Derived values</summary><div class="grpbody" id="derived"></div></details>
-        <div class="grpbody" style="padding-top:12px"><div class="btnrow"><button type="button" class="btn sm ghost" id="cfgDefaults">Restore all defaults</button></div></div>
+        <div class="grpbody" style="padding-top:12px">
+          <div class="btnrow"><button type="button" class="btn sm" id="imp2d" title="Copy the inputs saved by the 2D page on this site">Load inputs from the 2D page</button><button type="button" class="btn sm ghost" id="cfgDefaults">Restore all defaults</button></div>
+          <p class="note" id="impMsg">The 3D page keeps its own inputs. The import reads what the 2D page saved in this browser; it works when both pages are served from the same site.</p>
+        </div>
       </aside>
 
       <div class="stage">
@@ -362,18 +370,22 @@ table.matrix td.selc { outline: 2px solid var(--accent); outline-offset: -2px; }
           <label for="colorBy">Colour
             <select id="colorBy"><option value="size">Nominal diameter Dn</option><option value="class">Shape class</option><option value="length">Stone length L</option><option value="velocity">Speed</option><option value="state">Stalled / moving</option></select>
           </label>
-          <label><input type="checkbox" id="tgStrip" checked> Solid fraction</label>
-          <label><input type="checkbox" id="tgForce"> Force chains</label>
-          <label><input type="checkbox" id="tgVec"> Velocity</label>
-            <label title="Show the contact spheres used by the DEM instead of the stone outline"><input type="checkbox" id="tgSph"> Contact spheres</label>
-          <label for="wallAlpha">Wall opacity <input type="range" id="wallAlpha" min="0" max="1" step="0.05" value="0.35" style="width:70px"></label>
+          <label title="Show the spheres the DEM uses instead of the stone body"><input type="checkbox" id="tgSph"> Contact spheres</label>
+          <label title="Remove the half of the pipe wall facing you"><input type="checkbox" id="tgCut" checked> Cutaway</label>
+          <label><input type="checkbox" id="tgWater" checked> Water levels</label>
+          <label for="wallAlpha">Wall opacity <input type="range" id="wallAlpha" min="0" max="1" step="0.05" value="0.3" style="width:70px"></label>
+          <span class="grpbtn">
+            <button type="button" class="btn sm ghost" id="bSide" title="Side view, tilt plane facing you">Side</button>
+            <button type="button" class="btn sm ghost" id="bIso" title="Three-quarter view">3/4</button>
+            <button type="button" class="btn sm ghost" id="bTop" title="Look down the pipe from the feed">Top</button>
+            <button type="button" class="btn sm ghost" id="bBot" title="Look up the pipe from the outlet">Bottom</button>
+          </span>
           <button type="button" class="btn sm ghost" id="bFit">Fit</button>
-          <button type="button" class="btn sm ghost" id="bCrit" title="Zoom to the active bridge, or the first overlap">Zoom critical</button>
-          <button type="button" class="btn sm ghost" id="bAxis" title="Rotate so the pipe axis runs down the screen">Axis view</button>
-          <button type="button" class="btn sm ghost" id="bRot">Rotate 90</button>
+          <button type="button" class="btn sm ghost" id="bCrit" title="Zoom to the active dome, or the first overlap">Zoom critical</button>
         </div>
         <div class="canvas-wrap">
-          <canvas id="view" aria-label="Section view of the fall pipe with stones"></canvas>
+          <canvas id="view" aria-label="3D view of the fall pipe window with stones"></canvas>
+          <div id="noGL" hidden>The 3D view needs WebGL and the three.js library. Check that WebGL is enabled and the page can load scripts from cdnjs.cloudflare.com. The simulation and charts still work.</div>
           <div id="pending" hidden>Inputs changed. Press Reset to apply them.</div>
         </div>
         <div class="legend" id="legend"></div>
@@ -399,424 +411,129 @@ table.matrix td.selc { outline: 2px solid var(--accent); outline-offset: -2px; }
         <div class="chartbox"><button type="button" class="enl" data-big="flow" title="Open this chart large">Enlarge</button><canvas class="chart" id="ch-flow"></canvas></div>
         <div class="chartbox"><button type="button" class="enl" data-big="inside" title="Open this chart large">Enlarge</button><canvas class="chart" id="ch-inside"></canvas></div>
         <div class="chartbox"><button type="button" class="enl" data-big="vel" title="Open this chart large">Enlarge</button><canvas class="chart" id="ch-vel"></canvas></div>
+ <div class="chartbox"><button type="button" class="enl" data-big="phi" title="Open this chart large">Enlarge</button><canvas class="chart" id="ch-phi"></canvas></div>
         <div class="chartbox"><button type="button" class="enl" data-big="status" title="Open this chart large">Enlarge</button><canvas class="chart short" id="ch-status"></canvas></div>
         <div class="chartbox"><button type="button" class="enl" data-big="profile" title="Open this chart large">Enlarge</button><canvas class="chart tall" id="ch-profile"></canvas></div>
         <div><h3>Events</h3><div id="liveEvents"></div></div>
       </div>
     </section>
 
-    <!-- ================= RESULTS ================= -->
-    <section class="tab" id="tab-results" hidden>
-      <div class="page">
-        <h2>Run results</h2>
-        <div class="card" id="resSummary"></div>
-        <div class="card">
-          <div class="sumhead"><h3>Compare runs</h3><button type="button" class="btn sm ghost" id="resClear">Clear all</button></div>
-          <p class="note">Every completed run (interactive or parametric) is listed. Kept in this browser only.</p>
-          <div id="resCompare"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ================= GRADES ================= -->
-    <section class="tab" id="tab-grades" hidden>
-      <div class="page">
-        <h2>Rock grades and measured data</h2>
-        <p class="note">Values are shown as given by their source. Missing values are "not given". Derived values say so. Sources: T1 your LMA tables, T2 your class table, S1 prEN 13383-1:2021 (draft), B1 your batch test.</p>
-        <div class="gradesgrid">
-          <aside id="gradeList"></aside>
-          <div class="card" id="gradeDetail"></div>
-        </div>
-        <div class="card">
-          <h3>Import measured stones (Excel or CSV)</h3>
-          <div class="btnrow"><input type="file" id="gFile" accept=".xlsx,.xls,.csv,.txt"></div>
-          <div id="importBody"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ================= STRING ================= -->
-    <section class="tab" id="tab-string" hidden>
-      <div class="page">
-        <h2>Fall pipe string</h2>
-        <p class="note">Stacks, buckets, transitions and materials. Changes apply to the Simulate page immediately. The DEM simulates the highlighted window only.</p>
-        <div id="stringBody" style="display:flex;flex-direction:column;gap:16px"></div>
-      </div>
-    </section>
-
-    <!-- ================= PROBABILITY ================= -->
     <section class="tab" id="tab-prob" hidden>
       <div class="page">
-        <h2>Blockage probability and parametric study</h2>
+        <h2>Blockage probability: many 3D runs</h2>
         <p class="note" id="stBase"></p>
         <div class="studyform">
           <div class="card">
             <h3>Setup</h3>
             <label class="row"><span class="lab">Vary</span><span class="ctl"><select id="stParam"></select></span></label>
-            <label class="row" id="stValuesRow"><span class="lab">Values</span><span class="ctl"><input type="text" id="stValues" placeholder="e.g. 700, 850, 1000"></span></label>
+            <label class="row" id="stValuesRow"><span class="lab">Values</span><span class="ctl"><input type="text" id="stValues" placeholder="e.g. 800, 900, 1000"></span></label>
             <label class="row"><span class="lab">Runs per cell (seeds)</span><span class="ctl"><input type="number" id="stReps" value="20" min="1" max="5000"></span></label>
             <label class="row"><span class="lab">First seed</span><span class="ctl"><input type="number" id="stSeed" value="1"></span></label>
-            <label class="row"><span class="lab">Duration per run [s] (0 = as Simulate)</span><span class="ctl"><input type="number" id="stDur" value="30" min="0" step="any"></span></label>
-            <label class="row check"><input type="checkbox" id="stStop" checked><span>Stop a run once it reaches RED</span></label>
+            <label class="row"><span class="lab">Dumping time per run [s] (0 = as Simulate)</span><span class="ctl"><input type="number" id="stDur" value="30" min="0" step="any"></span></label>
+            <label class="row check"><input type="checkbox" id="stStop" checked><span>Stop a run once it reaches RED (persistent blockage)</span></label>
           </div>
           <div class="card">
-            <h3>Rock grades</h3>
+            <h3>Rock grades (rows)</h3>
             <div id="stGrades" style="display:flex;flex-direction:column;gap:4px;max-height:260px;overflow:auto"></div>
           </div>
           <div class="card" style="display:flex;flex-direction:column;gap:8px">
             <h3>Run</h3>
-            <div class="btnrow"><button type="button" class="btn" id="stRun">Run</button><button type="button" class="btn ghost" id="stCancel" disabled>Cancel</button></div>
+            <div class="btnrow"><button type="button" class="btn" id="stRun">Run study</button><button type="button" class="btn ghost" id="stCancel" disabled>Cancel</button></div>
             <div class="prog"><div id="stBar"></div></div>
             <div id="stProg">Idle.</div>
             <p class="note" id="stMsg"></p>
             <p class="note" id="stWorkers"></p>
+            <div class="btnrow"><button type="button" class="btn sm" id="stReport" disabled title="Save the study as a PDF report: setup, result matrix, chart, breakdown per case, model inputs">Create PDF report</button></div>
+            <p class="note" id="stRepMsg"></p>
           </div>
         </div>
-        <div class="card"><h3>Result matrix</h3><div id="stMatrix"><p class="note">Run a study to fill the matrix. With "None" selected, the matrix shows repeated runs of the current setup for each selected grade.</p></div></div>
+        <div class="card"><h3>Result matrix</h3><div id="stMatrix"><p class="note">Pick grades (rows) and a parameter to vary (columns), for example the bucket bottom ID, then Run study. With "None", each grade is run repeatedly with the current setup.</p></div></div>
         <div class="card" id="stDetail"></div>
+        <div class="card">
+          <h3>Validation benchmark (3D silo clogging)</h3>
+          <p class="note" style="max-width:90ch">Runs this engine on identical dry spheres discharging from a flat-bottomed silo through a round orifice, 6 seeds each at orifice / sphere diameter 3, 4 and 6. Published 3D experiments (Zuriguel et al. 2005) find jams after a few to a few tens of grains at D/d = 3 and no jams above about 4.9 for spheres. Passing shows the 3D contact, friction and arching mechanics reproduce the clogging trend; it does not test water forces or rock shape. The silo is small (about 250 to 420 grains), so it checks the trend, not the exact critical size.</p>
+          <div class="btnrow"><button type="button" class="btn sm" id="benchRun">Run benchmark</button><span class="note" id="benchProg"></span></div>
+          <div id="benchOut"></div>
+        </div>
       </div>
     </section>
 
-    <!-- ================= DIAGNOSTICS ================= -->
+    <section class="tab" id="tab-results" hidden>
+      <div class="page">
+        <h2>3D run results</h2>
+        <div class="card" id="resSummary"></div>
+        <div class="card">
+          <div class="sumhead"><h3>Compare runs</h3><button type="button" class="btn sm ghost" id="resClear">Clear all</button></div>
+          <p class="note">Every completed 3D run is listed. Kept in this browser only, separate from the 2D run list.</p>
+          <div id="resCompare"></div>
+        </div>
+      </div>
+    </section>
+
     <section class="tab" id="tab-diag" hidden>
       <div class="page">
         <h2>Validation and diagnostics</h2>
         <div class="card">
           <h3>Is this physics or numerics?</h3>
-          <p class="note" style="max-width:90ch">Treat a result as possibly meaningful only if: the count and mass balances close, maximum overlap stays below about 5 % of radius, no particles escape through walls, and the same outcome appears with a different seed, a halved time step and stiffer contacts. Use the buttons to rerun with one change at a time and compare in Results.</p>
+          <p class="note" style="max-width:90ch">Treat a result as possibly meaningful only if: the count and mass balances close, maximum overlap stays below about 5 % of radius, no stones escape through walls, and the same outcome appears with a different seed, a halved time step and stiffer contacts. Use the buttons to rerun with one change at a time and compare in Results.</p>
           <div class="btnrow">
             <button type="button" class="btn sm" data-sens="seed">Rerun with next seed</button>
             <button type="button" class="btn sm" data-sens="dt">Rerun with half time step</button>
             <button type="button" class="btn sm" data-sens="k">Rerun with 2x stiffness</button>
           </div>
         </div>
-        <div class="card" id="benchCard">
-          <h3>Validation benchmarks (2D experiments)</h3>
-          <p class="note" style="max-width:90ch">These tests run this exact engine on published 2D clogging experiments with identical dry disks, 12 seeds per case. Hopper: To et al. (2001), V-funnel, about 200 disks; jams always at opening/disk = 2 and never at 5. Vertical pipe, packed column released: Zhou et al. (2025), friction 0.4; stable three-disk arches for D/d between about 2.45 and 3, flow outside that band. Passing them shows the 2D contact and arching physics is right; it does not make 2D results valid for a round 3D pipe (Janda et al. 2015: clogging up to D/d50 of about 6.8).</p>
-          <div class="btnrow"><button type="button" class="btn sm" id="benchRun">Run benchmarks</button><span class="note" id="benchProg"></span></div>
-          <div id="benchOut"></div>
-        </div>
         <div id="diagBody"></div>
       </div>
     </section>
 
-    <!-- ================= SYSTEM ================= -->
-    <section class="tab" id="tab-system" hidden>
-      <div class="page">
-        <h2>Coupled system</h2>
-        <div id="systemBody" style="display:flex;flex-direction:column;gap:16px"></div>
-      </div>
-    </section>
-
-    <!-- ================= METHOD ================= -->
     <section class="tab" id="tab-method" hidden>
       <div class="page">
-        <h2>Method, assumptions and architecture</h2>
-        <div class="levels">
-          <div class="stw"><b>1. Visual animation</b>Motion drawn to look plausible. No contact mechanics. Not used here.</div>
-          <div class="st0 lv-now"><b>2. Simplified engineering model</b>This application (V2). Quasi-2D DEM of rigid stone clumps with friction, rolling resistance and material-dependent walls, two-way coupled to a 1D water column (entrained flow, leaky joints, hindered drag, added mass), continuous mass-controlled feed, Monte Carlo over seeds.</div>
-          <div class="stw"><b>3. Full DEM-quality analysis</b>3D DEM with calibrated shapes and contact laws, coupled to the water flow (CFD-DEM), validated against tests. Not this tool.</div>
-        </div>
-
+        <h2>3D method, assumptions and status</h2>
         <div class="card prose">
-          <h3>Result categories</h3>
-          <div class="tbl-wrap"><table class="data"><thead><tr><th>Category</th><th>What it is</th><th>How to read it</th></tr></thead><tbody>
-            <tr><td><span class="ctag t-analytical">Analytical</span></td><td>Geometry, continuity, basic mechanics: clear passage vs generated B and L, Dn ratios, terminal velocity, bucket mass and stiffness</td><td>Exact for the stated inputs</td></tr>
-            <tr><td><span class="ctag t-empirical">Empirical</span></td><td>Published correlations: Thomas &amp; Durian clog fraction, Zuriguel/Janda critical-size results, Beverloo, Richardson-Zaki</td><td>Fitted to dry or dilute, mostly monodisperse lab systems. Indicative only, never a prediction for this system</td></tr>
-            <tr><td><span class="ctag t-dem">DEM</span></td><td>Simulated stone motion, bridges, blockage classes and probabilities</td><td>Model output at level 2. Meaningful only when numerical checks pass and the result is stable across seed, time step and stiffness</td></tr>
-            <tr><td><span class="ctag t-assumption">Assumption</span></td><td>Inputs without a source: shape distribution where none is measured, contact parameters, detection thresholds, bulk packing, Beverloo k</td><td>Editable. Replace with test data</td></tr>
-          </tbody></table></div>
-
-          <h3>Stone generation</h3>
-          <ol>
-            <li>A stone <b>mass</b> M is drawn from the grade (measured masses or a curve inside the standard envelope).</li>
-            <li>Nominal diameter Dn = (M / rho)<sup>1/3</sup>. This is the equivalent cube size, not a measured length.</li>
-            <li><b>Shape class</b> (default model, V2.4) drawn from the grade's class mix after Zingg: blocky/cubic (B/L and T/B 0.67-1), long and thin (B/L 0.40-0.67), flat/slab (T/B 0.40-0.67), bladed (both 0.40-0.67) and rounded/near circular (both 0.75-1). Axis ratios are uniform inside the class limits. Measured L/B/T records of the grade are used first where they exist. Default mix 55/15/15/10/5 % is an ASSUMPTION guided by Domokos et al. (2020: natural fragments are cube-like on average) and the Rock Manual (L/T &gt; 3 typically &lt; 5 % for heavy and &lt; 20 % for light gradings). Replace it with measured shape counts of the actual rock.</li>
-            <li>Block size from the volume factor: V = vf L B T = Dn<sup>3</sup>, vf 0.6 for blocks (ASSUMPTION, cuboid 1.0, ellipsoid 0.524) and pi/6 for rounded stones.</li>
-            <li>Legacy L/T model (selectable): elongation L/T from a truncated normal, intermediate axis B = T (L/T)<sup>phi</sup>.</li>
-            <li>Ellipsoid L x B x T with the same volume: (pi/6) L B T = Dn<sup>3</sup>. Optionally L is capped at (Lmax/Dn) x Dn from the grade table.</li>
-            <li>Orientation: a uniform random 3D rotation, then the shadow of the block (8 corners) or ellipsoid on the section plane gives the outline (or the worst case: long axis in plane).</li>
-            <li>Blocks: the shadow rectangle is filled with a row of core circles plus four small corner circles (radius 0.3 of the half thickness by default), giving flat faces and corners that lock against walls and other stones. Clumps of spheres still round off sharp edges (Suhr &amp; Six 2020), so very angular contact is approximated, not reproduced. The view draws the outline as the hull of the contact circles; tick "Contact spheres" to see what the DEM uses.</li>
-            <li>Ellipsoids (rounded class and legacy model): the outline is filled with up to 7 overlapping circles. The interior circles are inscribed in the ellipse and the end circles have the tip curvature b<sup>2</sup>/a. An irregularity factor perturbs the radii and offsets to approximate angular stones. Stones rotate freely and interlock through these clumps.</li>
-          </ol>
-          <p>Inertia is m (a<sup>2</sup> + b<sup>2</sup>)/5 using the projected semi-axes. Drag uses the mean projected area of the 3D ellipsoid (surface area / 4, independent of orientation) with an input Cd.</p>
-
-          <h3>Contact physics</h3>
+          <h3>What changes from the 2D page</h3>
           <ul>
-            <li>Normal: linear spring-dashpot, <code>Fn = k delta + c vn</code>, no tension, after Cundall &amp; Strack (1979). The damping coefficient follows from the restitution coefficient: <code>c = 2 zeta sqrt(k m)</code>, <code>zeta = -ln e / sqrt(pi^2 + ln^2 e)</code>.</li>
-            <li>Tangential: incremental spring capped by Coulomb friction <code>|Ft| &lt;= mu Fn</code>. Stored static friction is what lets arches stand.</li>
-            <li>Rolling: constant directional torque <code>muR Reff Fn</code>, one of the model families compared by Ai et al. (2011).</li>
-            <li>Stiffness scales with the stones' nominal radii, <code>k = kn Reff / Reff(Dn50)</code>. kn is set so a reference stone (M90 by default) hitting at vChar overlaps by the target percentage of Dn50. Contacts are deliberately softer than real rock (standard DEM practice).</li>
-            <li>Walls: friction, restitution and rolling resistance come from the bucket material. Stiffness is multiplied by the Hertz effective-modulus ratio <code>E*(rock-wall) / E*(rock-rock)</code>, where <code>1/E* = (1 - nu1^2)/E1 + (1 - nu2^2)/E2</code>. The ratio is clipped to the set limits, because PE walls are about 20 times softer than rock and would give unrealistic overlaps in a softened model.</li>
-            <li>Time step: a fraction of the shortest contact duration <code>pi sqrt(m_eff / k)</code>, for both stone-stone and stone-wall contacts.</li>
+            <li><b>Full pipe, no slice.</b> Stones move in the round pipe with 6 degrees of freedom. The whole mass flow is released, so masses and rates are real tonnes and t/h; no slice factor.</li>
+            <li><b>Stones.</b> Same grade sampler and shape classes as 2D (mass, Dn, Zingg classes, volume factor, Lmax cap, measured sub-population). The body is a superellipsoid |x/a|^p + |y/b|^p + |z/c|^p = 1 inside the L x B x T box, with p set so the volume is the volume factor times L B T: p = 2.33 for blocks at 0.6 (flat-ish faces, rounded corners), p = 2 for rounded and L/T stones (ellipsoid). Every contact sphere is inscribed in that body, chosen to cover its surface (up to 24 spheres, symmetric, axis tips weighted so L, B and T are reached: on average 97 to 99 % of each half axis). The drawn stone is the same body. Inertia from the superellipsoid. Orientation is a uniform random quaternion.</li>
+            <li><b>Correction in 0.2.</b> Version 0.1 put 8 spheres at the corners of the full bounding box. A stone 720 mm long was then 830 mm across its diagonal, wider than a real rock with that volume factor, and wider than the drawn stone. Stones smaller than the opening wedged across the bucket lip. At 4000 t/h with 800 mm bucket bottoms, 6 of 6 seeds blocked with v0.1, 5 of them on single stones smaller than the passage; with v0.2, 5 of 6 flow and the sixth is a multi-stone dome. The dome card now lists the jammed stone's L x B x T against the passage.</li>
+            <li><b>Walls.</b> Each bucket, wall thickness, lip, insertion ledge, the feed chute or funnel and the restart gate is the same closed quadrilateral as in 2D, revolved about the axis. A sphere meets a revolved segment at the closest point in its own meridian plane, which is exact for surfaces of revolution.</li>
+            <li><b>Contacts.</b> Same laws as 2D: linear spring-dashpot normal force from the restitution coefficient, incremental tangential spring with the Coulomb limit (a 3D vector kept in the tangent plane by projection and rescaling every step), constant rolling torque opposing the relative spin, stiffness scaled by stone size and by E* of the wall material.</li>
+            <li><b>Rotation.</b> Unit quaternions, Euler's equations in the body frame with the gyroscopic term, semi-implicit Euler.</li>
+            <li><b>Time step.</b> A contact on a clump also turns the stone, so the effective mass at the contact is m / (1 + m d^2 / I). The shortest contact time uses the smallest value of that over the stone sample, which roughly halves the time step against the 2D rule. Without it, settled packs did not come to rest and high damping became unstable.</li>
+            <li><b>Water.</b> The same 1D coupled water column along the whole string (entrained flow, joint leakage, free surface in the moonpool, Di Felice hindrance, pressure gradient, added mass). The local voidage is the stone volume in the cross-section (2D used 2/3 of the in-plane area fraction).</li>
+            <li><b>Pipe tilt.</b> As in 2D the DEM pipe stays straight and gravity turns with the local link angle; stones settle towards -x.</li>
+            <li><b>Feed (0.3).</b> "Drop" releases stones at rest across the feed opening, falling straight; they barely touch the walls in the moonpool. "Conveyor discharge" releases a stream at the feed offset with the belt speed horizontally (direction in the pipe section, scatter of speed and direction), the vertical speed of the drop below the head pulley and forward spin (share of v/r). Stones then hit the funnel or the first bucket wall on the far side and arrive at the water tumbling, as in operation.</li>
+            <li><b>Vessel motion (0.3).</b> Regular roll, pitch and heave with random phases per run. In the pipe frame the apparent gravity is turned by the roll and pitch angles, the pipe at depth z below the roll centre accelerates sideways by z times the angular acceleration (the inertial term +z w^2 theta opposes the gravity tilt below z = g / w^2), and heave changes apparent gravity by (g + h'')/g, also for buoyancy. The string moves rigidly with the vessel; its own dynamic response, sloshing of the water column and current-induced motion are not modelled.</li>
+            <li><b>Numerical precision (0.3).</b> Presets for the contact stiffness and time step. High (default): overlap at most 1 % of Dn50 at the terminal velocity of Dn90, dt at most 0.10 t_c. Very high: overlap 0.5 % at the water entry speed of the dry fall, dt 0.07 t_c. The values used are listed under Derived values; compare Standard and High on a case to see whether a result depends on the numerics.</li>
+            <li><b>Outputs (0.3).</b> Wall impacts per bucket (new contacts with normal speed above 0.3 m/s: count, energy, peak speed) for wear and lip loading, and the speed and long-axis angle of stones crossing the water surface (60 deg median = random orientation).</li>
+            <li><b>Contact law (0.4).</b> Hertz-Mindlin by default: normal stiffness 2 E* sqrt(R* d) and tangential stiffness 8 G* sqrt(R* d) from the elastic modulus and Poisson ratio of rock and wall material (Hertz 1882, Mindlin 1949), damping 2 sqrt(5/6) beta sqrt(S m*) from the restitution coefficient (Tsuji et al. 1992; the default in EDEM). R* is the local curvature of the contact spheres. No softening factor and no stiffness clipping: HDPE walls (E* about 1.2 GPa against rock) deform about 15 mm under an 11 m/s impact of a 100 kg stone, steel walls far less. Time step 0.08 (High) of the Hertz contact time 2.87 (m*^2 / (R* E*^2 v))^(1/5) at the highest expected impact speed. The softened linear spring remains selectable.</li>
+            <li><b>Drag (0.4).</b> Bagheri and Bonadonna (2016): drag of non-spherical particles from flatness T/B, elongation B/L, the volume factor and the density ratio, valid up to Re about 3e5, on the volume-equivalent sphere. A blocky stone gets Cd about 0.8, flat or elongated stones up to about 1.3 (sphere 0.46), so shape now sets how fast each stone settles. Applied in water and in air above the water surface. Rotational drag torque after Dennis, Singh and Ingham (1980) slows spinning stones; it underestimates the resistance of flat stones.</li>
+            <li><b>Why steady high flow rarely blocks (0.5).</b> At 5000 t/h through a 1 m pipe the rock fills only about 6 to 10 % of the pipe volume, because it moves at 5 to 9 m/s (1.39 t/s / (2650 kg/m3 x 0.785 m2 x 8.9 m/s) = 7 %). A dome needs several stones in slow contact with each other and the wall all round. The live readout and chart "Rock share of the pipe volume" show this; domes become likely above about 30 %. Dense flow comes from uneven feed, slower stones low in the string, and a restricted or choked outlet, all added in 0.5.</li>
+            <li><b>Feed pattern (0.5).</b> Even, Surges (the rock of each interval released as one slug over a short time, same mean rate) or Intermittent (feed on and off). Rock that does not fit in the feed zone waits and enters as the pipe takes it ("rock waiting at inlet").</li>
+            <li><b>Lower string and outlet (0.5).</b> "DEM window at the end of the string" places the window over the last buckets. An outlet nozzle (FP ROV) can narrow the pipe end, and a flat surface below it stands for the rock berm, the seabed or a deflector plate: rock piles on it at its angle of repose and slides off the edge. With the pipe end 0.6 m above the surface the pile reached the outlet and the flow stopped; at 1.5 m and 3 m it kept flowing. When the window starts below the pipe top, each stone enters with the speed of its own fall from the pipe top (air, then water, with its own drag), computed per stone.</li>
+            <li><b>Collisions in water.</b> Wet restitution depends on the Stokes number St = rho_s v d / (9 mu) (Joseph et al. 2001); it approaches the dry value above St of about 1000. Rock impacts here have St of about 10^4 to 10^5, so the dry restitution input applies and no lubrication correction is added.</li>
+            <li><b>Rock-wall friction.</b> Interface shear tests of granular soil on smooth HDPE geomembranes report friction angles of roughly 15 to 25 deg (mu about 0.27 to 0.47). The HDPE default 0.3 sits in that range. It is still an assumption for wet quarried rock on a bucket wall: use the Probability tab's friction sensitivity to see how much it matters for a given case.</li>
+            <li><b>Arches.</b> In a round pipe a dome must lean on the wall all round. The engine records the azimuth of each wall contact in 12 sectors of 30 deg; a connected group of stalled stones spans the pipe when its wall contacts touch at least 3 sectors and are not confined to one half of the circumference. A single stone meeting that test is a single-stone obstruction. Status levels, events and run classes are otherwise identical to 2D.</li>
+            <li><b>Solid fraction.</b> Volume fraction in each axial bin. The dense-zone threshold default is 0.35 (2D: 0.5 in-plane).</li>
           </ul>
-
-          <h3>Pipe tilt, current and FP ROV (V2.7)</h3>
-          <p>The bucket string can be vertical, tilted at one angle, given a top angle plus a change per joint, or shaped by current with the FP ROV holding the tip.</p>
+          <h3>Checks run on the engine</h3>
           <ul>
-            <li><b>Shape in current (static chain).</b> Each bucket is a rigid link from the previous lip to its own lip; the string bends only at the joints. Equilibrium of everything below a point gives <code>tan theta = H / T</code>, with <code>T = W_b + sum w L</code> (ROV or bottom weight in water, buckets in water, chains; links above the water level weigh in air) and <code>H = H_b + sum f L</code>. Current drag per metre is the Morison drag term <code>f = 1/2 rho Cd D_out U_rel |U_rel|</code>, with <code>U_rel = U(z) - V_vessel</code> and <code>U(z) = U0</code> or <code>U0 ((d - z)/d)^(1/7)</code>.</li>
-            <li><b>FP ROV.</b> Free tip: <code>H_b</code> is the drag on the ROV. ROV holding position: <code>H_b</code> is solved so the tip offset equals the target; the ROV thrust needed is <code>H_b - F_ROV</code>, compared with its maximum. Above the maximum the thrust is capped and the tip drifts. For a light string and uniform current the ROV needs about half the string drag plus its own drag, and the string bows with top and bottom angles of about <code>+/- f L / (2 W_b)</code>.</li>
-            <li><b>Checks.</b> Top angle against the allowed angle in the moonpool (design dependent; 7 deg while dumping in patent US8628287), each joint angle against its geometric limit <code>tan = 2 c / ins</code>, string tension (buoyant HDPE buckets hang only from the ROV and chains).</li>
-            <li><b>Effect on the rock.</b> The DEM pipe stays straight and gravity is turned by the local link angle: <code>g_pipe = (-g' sin theta, -g' cos theta)</code>. Stones drift to the lower wall at about <code>v_t sqrt(sin theta)</code> and slide along it; a sliding stone is driven by <code>g' (cos theta - mu sin theta)</code>. Wall friction, rolling and impacts at the joints come from the contact model. Curvature terms <code>v^2 / R</code> are neglected. The tilt lies in the simulated plane (worst case).</li>
-            <li><b>Not modelled:</b> vessel motion and dynamic response, vortex-induced vibration, current direction out of the simulated plane, cross-flow reduction of drag on inclined links (conservative for small angles), loads from the rock inside the string, bending stiffness of a continuous pipe.</li>
+            <li>3D silo clogging benchmark (Probability tab): identical dry spheres through a round orifice. At D/d = 3 all runs jammed after 4 to 70 grains; at D/d = 4 and 6 the silo emptied to its dead zone without a loaded arch, matching the trend of Zuriguel et al. 2005 (no jams above about 4.9 for spheres).</li>
+            <li>Single sphere in still water reaches the Newton-drag terminal velocity exactly (3.065 m/s for the test case, analytic 3.065 m/s), with no lateral drift.</li>
+            <li>40 stones settling on the closed restart gate come to rest: kinetic energy from about 250 J to below 0.001 J, highest speed 3 mm/s, overlap about 1 % of stone radius, also with restitution 0.1.</li>
+            <li>Count and mass balance close to zero in every run; no stones escaped in the test runs.</li>
           </ul>
-
-          <h3>Water effect (scour-protection dumping through the moonpool)</h3>
-          <p>The fall pipe hangs through the moonpool and is open to the sea at the bottom. Its top is above the water surface in the moonpool (input "Pipe top above water", default 6 m). The side-deployed inclined pipe has no moonpool; for it the same input is the height of the pipe top above the sea surface beside the vessel, and the same dry fall and free surface apply. In the coupled water model:</p>
+          <h3>Not yet done</h3>
           <ul>
-            <li><b>Dry part in the moonpool.</b> Above the water surface the stones fall in air: full weight, no buoyancy, no added mass, air drag only (rho 1.2 kg/m3). They reach the water at <code>v = sqrt(v0^2 + 2 g H)</code>, about 11 m/s after 6 m, well above their terminal velocity in water, and are braked by drag below the surface.</li>
-            <li><b>Free surface inside the pipe.</b> No water can enter through the top, so the inside water surface is free (atmospheric) and is drawn down below the moonpool level when the rock pulls water downward: <code>p' = -rho g z</code> at the surface, <code>dz/dt = Q_top / A</code>. Through-flow is then fed only by the leaky joints. With sealed joints there is no steady flow, and the level drops until <code>rho g z A</code> carries the rock drag on the water column. Joints above the moonpool water level exchange air and are excluded. Setting the input to 0 gives a submerged inlet with entrance loss K_in.</li>
-            <li><b>Entrained flow.</b> Falling stones hand their submerged weight to the water through drag. This pulls a downward water flow through the pipe, supplied by the joints (or the top inlet when it is submerged): the induced flow described by Chen et al. 2015. The water is modelled as a 1D column along the whole wet string, not only the DEM window. Rock loading: the drag reaction measured in the wet part of the DEM window, plus the steady settling load <code>(rho_s - rho_w)/rho_s g mdot / v_s</code> on the wet string outside the window (v_s from Richardson-Zaki with the measured rock inflow), plus the momentum flux <code>mdot (v_entry - v_s)</code> at the water surface when the surface lies outside the window.</li>
-            <li><b>Losses that limit the flow:</b>
-              <ul>
-                <li>Entrance loss K_in at the top inlet, plus the velocity head.</li>
-                <li>Darcy wall friction <code>f L/D</code>. f comes from Haaland: <code>1/sqrt(f) = -1.8 log10[(e/3.7D)^1.11 + 6.9/Re]</code>, using the material roughness.</li>
-                <li>A Borda-Carnot sudden-expansion loss <code>rho (u1 - u2)^2 / 2</code> wherever a bucket lip discharges into the wider bucket below.</li>
-                <li>Lossless Bernoulli changes along each cone.</li>
-                <li>A free jet at the outlet; reverse flow into the outlet takes an entrance loss.</li>
-              </ul>
-            </li>
-            <li><b>Leaky joints.</b> Each transition gap (the annular pocket, area = mean diameter x pi x radial clearance) is an orifice to the sea, <code>q = Cd A sqrt(2|p'|/rho)</code>. Water flows in where the inside pressure is below ambient (upper part) and out where it is above. Buckets between gaps form reaches with their own water inertia <code>rho sum L/A</code>, integrated semi-implicitly. The water starts at rest, so the start-up is included.</li>
-            <li><b>Effects on the stones:</b>
-              <ul>
-                <li>Drag acts on the slip velocity relative to the local interstitial water velocity Q/(A eps).</li>
-                <li>Dense flow increases drag through the Di Felice (1994) voidage function <code>eps^(2 - chi)</code>, with <code>chi = 3.7 - 0.65 exp(-(1.5 - log10 Re)^2/2)</code>. Local voidage comes from the stones in the slice: 3D solid fraction = 2/3 of the in-plane area fraction (assumption).</li>
-                <li>The pressure gradient of the moving water acts on each stone (<code>-V dp'/ds</code>).</li>
-                <li>Stones carry an added mass Ca x displaced water mass (0.5 for a sphere).</li>
-                <li>The drag reaction on the water closes the two-way coupling.</li>
-              </ul>
-            </li>
-            <li><b>Check:</b> an analytical sealed-pipe momentum balance (submerged rock weight per metre against all losses, slip from Richardson-Zaki) is shown next to the DEM-coupled value.</li>
-            <li><b>Not modelled:</b> velocity profile across the pipe, turbulence and wakes, clustering, air carried in at the moonpool, the jet and spreading at the seabed, current, vessel motion. These need CFD-DEM (level 3). The still-water option reproduces V2 for comparison.</li>
+            <li>No validation against 3D clogging experiments (for example Janda et al. 2015 narrow pipes, Thomas and Durian 2015 hoppers). Read single runs as mechanisms; compare seeds before drawing conclusions.</li>
+            <li>Shape-induced lift and pitching torque (stones turning broadside to the flow) are not modelled: published correlations stop at Re of a few hundred, far below the Re of 10^5 to 10^6 here.</li>
+            <li>The body is a smooth superellipsoid; real rock faces and sharp edges are approximated by its exponent. The sphere fill lies inside the body, so contact is never larger than the stone (gap to the surface on average about 12 % of T/2).</li>
+            <li>No radial water velocity profile, wakes or CFD coupling (level 3).</li>
+            <li>The string editor and grade import stay on the 2D page for now. The 3D engine uses the same module interfaces (geometry, factory, engine, detector), so it can be added to the 2D page as a model choice once it has been checked.</li>
           </ul>
-
-          <h3>Verification and validation status (V2.2)</h3>
-          <ul>
-            <li><b>Defect found and fixed.</b> Up to V2.1 the feed placed one stone at a time at the top of the chute, so high requested rates were never delivered. For example, only about 25 % of 25 000 t/h actually entered, and this was reported only as YELLOW. Stones are now released anywhere in a release zone with a shape-level overlap test. The share of the requested feed that the inlet accepts is measured and reported. If the inlet accepts less than the blocked ratio for the persistence time, it is classed as an inlet choke (RED).</li>
-            <li><b>2D physics validated against 2D experiments</b> (Diagnostics, Run benchmarks):
-              <ul>
-                <li>2D hopper (To et al. 2001): jams always at opening/disk = 2 and never at 5. Engine: 9/10 at 2, 7/10 at 3, 0/10 at 4 to 6.</li>
-                <li>2D vertical pipe with a packed column (Zhou et al. 2025, friction 0.4): clogging only between about 2.45 and 3. Engine: 0/12 at 2.2, 7/12 at 2.6, 0/12 at 3.0 to 4.0.</li>
-              </ul>
-            </li>
-            <li><b>Not valid for 3D round-pipe probabilities.</b> In 3D narrow vertical pipes, dense flow clogs up to D/d50 ≈ 6.8 or D/d95 ≈ 4.7 (Janda et al. 2015). A 2D section only forms three-stone arches, so inside that range the DEM under-predicts blockage. The Checks panel flags this.</li>
-            <li><b>Flow regime matters.</b> Faster discharge and kinetic energy break incipient arches (Janda et al. 2015; Arévalo &amp; Zuriguel 2016). Water makes clogging only slightly more likely in hoppers (Koivisto &amp; Durian 2017). A dilute, fast fall-pipe stream is therefore far less clog-prone than a dense one at the same size ratio. The dense cases are the critical ones:
-              <ul>
-                <li>overfeeding</li>
-                <li>a full hopper or funnel at the inlet (feed mode "gravity-fed full hopper", funnel option)</li>
-                <li>restart with rock left in the pipe (Restart option: window filled, settled on a closed outlet gate, then released)</li>
-                <li>accumulation at ledges</li>
-              </ul>
-            </li>
-            <li><b>Industry context:</b> fall pipe feeding up to about 2000 t/h (Chen et al. 2015); rock up to about 400 mm (IADC); DEME Flintstone fall pipe 650 mm. LMA 60/300 (Dn up to about 554 mm) is above typical fall-pipe rock sizes.</li>
-          </ul>
-
-          <h3>Continuous mass-controlled flow</h3>
-          <p>The feed releases a stone whenever the released mass is below <code>Q_slice x t</code>, at a random lateral position inside the feed opening, with the set inlet velocity. Placement waits if the chute entry is occupied, and that time is counted. Stones that pass the exit zone or leave the domain release their slot to a free list after a two-step quarantine, so stale friction history is never reused. Body capacity is sized from the window area. If it fills, the feed waits and diagnostics report it. Count and mass balances are checked continuously.</p>
-          <p><b>Slice scaling.</b> A 3D mass flow Q is converted to the simulated plane by the ratio of a Dn50-thick strip to the pipe area. All discharged masses are converted back to 3D-equivalent tonnes the same way. This sets the stone concentration and is a modelling assumption.</p>
-
-          <h3>Grade data and the batch test</h3>
-          <ul>
-            <li><b>Rule:</b> values are entered as given. Missing values stay "not given". Derived values are marked and show their formula.</li>
-            <li><b>Sources:</b>
-              <ul>
-                <li>T1: your LMA tables (limit masses, Dn, maximum expected length, Ds).</li>
-                <li>T2: your class table (M50 range for category A, D50 lower/upper, D85/D15, Dn50).</li>
-                <li>S1: prEN 13383-1:2021 (CEN enquiry draft). Gives the CP 32/90 sieve envelope, the LMA/LMB mass limits for grades not in T1, and the confirmation that LMB has no Mem requirement.</li>
-                <li>B1: your batch test.</li>
-              </ul>
-            </li>
-            <li><b>Derived from your data:</b>
-              <ul>
-                <li>rho = 2650 kg/m³ reproduces every Dn in T1.</li>
-                <li>Lmax/Dn = 1.80 at every limit.</li>
-                <li>T2 Dn50/D50(mid) = 0.82 to 0.86, so the class-table D50 is a sieve-type size.</li>
-              </ul>
-            </li>
-            <li><b>Envelope curves</b> are % lighter by mass.
-              <ul>
-                <li>Light gradings are interpolated with a Rosin-Rammler curve <code>y = 1 - exp(ln 0.5 (M/M50)^n)</code> through the NLL and NUL points (the CIRIA/CUR/CETMEF 2007 interpolation). Log-linear interpolation is available as an alternative.</li>
-                <li>The position in the envelope is selectable: fine edge, mid, coarse edge, or the curve whose number-mean matches the Mem midpoint.</li>
-                <li>Tails beyond ELL and EUL are truncated and the truncated mass share is reported.</li>
-                <li>Mass fractions are converted to number weights by dividing each mass increment by its stone mass. Skipping this would heavily over-represent large stones.</li>
-              </ul>
-            </li>
-            <li><b>Measured masses</b> (B1 or an import) are sampled directly by bootstrap. This reproduces the measured number distribution exactly, and the mass distribution follows. Optional log-space kernel smoothing is clipped to the measured range. Fragments weighed in bulk cannot be sampled as individual stones and are excluded (reported).</li>
-            <li><b>Validation of imports:</b>
-              <ul>
-                <li>Missing or non-numeric and zero or negative masses inside the data block.</li>
-                <li>Tukey fences on log mass (1.5 and 3 IQR).</li>
-                <li>Out-of-order rows and repeated values.</li>
-                <li>Conformity with the grade limits by mass (fragments counted).</li>
-                <li>Mem.</li>
-                <li>Number- and mass-weighted percentiles and histograms.</li>
-              </ul>
-              If L, B and T columns are given they are stored with the grade. Otherwise only the equivalent Dn is available and is labelled as such.</li>
-          </ul>
-
-          <h3>Blockage detection (per run)</h3>
-          <ul>
-            <li>Inlet and outlet mass are counted where stones cross s = 0 and s = L of the DEM window. Rates use a moving window that is extended automatically to hold about 10 stones at the nominal rate, because sparse coarse-rock flow is noisy.</li>
-            <li>Axial bins: count, in-plane solid fraction and mean axial velocity. A bin is a dense stalled zone if its solid fraction is above the threshold and its mean axial speed is below the stall speed.</li>
-            <li>Stalled stones are linked through the actual contact list. A connected group touching both walls is a spanning bridge. A single stone touching both walls is a single-stone obstruction.</li>
-            <li>Bridges are tracked over time. A bridge that disappears for longer than the break tolerance has broken (temporary). A bridge older than the persistence time while outlet flow is at or below the blocked ratio is a persistent blockage. Outflow stopping with stalled stones in the window for at least max(persistence time, 5 stone intervals) is also persistent.</li>
-            <li>Run classes: free, restricted (YELLOW or worse for more than the set share of the assessed time), temporary bridging, persistent blockage.</li>
-          </ul>
-
-          <h3>Blockage probability</h3>
-          <ul>
-            <li>N runs with different seeds per configuration. Each run gets a class. The probability of each class and of "restricted or worse" and "bridging or worse" is k/n with a 95 % Wilson score interval.</li>
-            <li>Persistent blockage is also treated as a Poisson process in discharged mass, after Thomas &amp; Durian (2015), who show clogging is Poissonian. Runs that blocked contribute the mass discharged before blockage; runs that did not block contribute their full discharged mass as censored exposure.
-              <ul>
-                <li>Rate: <code>lambda = r / M</code>.</li>
-                <li>95 % bounds: <code>chi2(0.025; 2r) / 2M</code> and <code>chi2(0.975; 2r+2) / 2M</code>.</li>
-                <li>Probability of blockage within mass X: <code>P(X) = 1 - exp(-lambda X)</code>.</li>
-              </ul>
-            </li>
-            <li>For each blocking run the report gives the time and mass discharged before blockage, the depth and nearest feature, and the Dn and L of the stones in the arch. The assessment never uses only D50 or a single ratio.</li>
-          </ul>
-
-          <h3>Analytical and empirical checks</h3>
-          <ul>
-            <li><span class="ctag t-analytical">Analytical</span> Sieve principle: a stone whose intermediate axis B exceeds a round opening cannot pass in any orientation. The tool reports the share of generated stones with B &gt;= clear passage, and with L &gt;= clear passage (these stones can span when misaligned).</li>
-            <li><span class="ctag t-analytical">Analytical</span> Terminal velocity <code>vt = sqrt(4/3 g Dn (rho_s - rho_w) / (rho_w Cd))</code>.</li>
-            <li><span class="ctag t-empirical">Empirical</span> Hindered settling, Richardson-Zaki <code>v = vt (1 - Cv)^beta</code>, with beta = 2.39 for coarse particles (Miedema). The maximum solids flux through the narrowest passage is reached at <code>Cv = 1/(1 + beta)</code>. A demand above it means dense flow is required. Water entrained downward by the rock raises the real capacity.</li>
-            <li><span class="ctag t-empirical">Empirical</span> Thomas &amp; Durian (2015): fraction of clogging configurations <code>F = exp[-C (x^(alpha/2) - 1)]</code>, with <code>x = (D/d)^2</code>, C = 0.14 and alpha = 3 in 3D. Mean mass before clog <code>&lt;m&gt; = rho_b A (0.75 d) / F</code>. Dry monodisperse spheres in hoppers.</li>
-            <li><span class="ctag t-empirical">Empirical</span> Zuriguel et al. (2005): no jams above opening/grain diameter of about 4.9 for spheres and about 6.2 for rice-shaped grains (3D silo). Janda et al. (2008): in 2D the jamming probability decays but no true critical size exists. Börzsönyi et al. (2016): elongated grains form different clogging domes.</li>
-            <li><span class="ctag t-empirical">Empirical</span> Beverloo: <code>W = C rho_b sqrt(g) (D - k d)^(5/2)</code>, C about 0.58, k material dependent. This is for dry discharge only and is shown as an order of magnitude.</li>
-          </ul>
-
-          <h3>Bucket string, transitions and materials</h3>
-          <ul>
-            <li><b>Data:</b> string → 1 to 30 stacks → 1 to 19 buckets each (stack count and buckets per stack are independent, with per-stack overrides). A bucket type holds top/bottom ID, length, wall thickness, insertion length and material. Each bucket can override any field. Stack joints can have their own insertion.</li>
-            <li><b>Geometry:</b> <code>sTop(i+1) = sBot(i) - ins(i)</code>.
-              <ul>
-                <li>Radial clearance at the upper lip: <code>(ID(i+1) at the insertion depth - OD(i) at the bottom) / 2</code>. Zero or negative means a clash and blocks the run.</li>
-                <li>The clear flow path through each transition is the smallest internal diameter over the overlap zone.</li>
-                <li>The annular pocket (width = clearance, depth = insertion) and the lip step are drawn as solid wall faces, so stones can lodge in them.</li>
-              </ul>
-            </li>
-            <li><b>DEM window:</b> a selectable run of consecutive buckets, centred by default on the narrowest transition. The whole string (up to 570 buckets) is too long for a browser DEM, so the inlet of the window takes either the input velocity or the terminal velocity of Dn50.</li>
-            <li><b>Structure, per bucket (thin conical shell):</b>
-              <ul>
-                <li>Volume V.</li>
-                <li>Mass <code>rho_mat V</code> and submerged weight <code>(rho_mat - rho_w) g V</code>. HDPE is buoyant, so this is negative.</li>
-                <li><code>EA</code> and <code>EI</code> at mid-height.</li>
-                <li>Allowable axial load <code>sAllow x A</code>, with no safety factor.</li>
-              </ul>
-              These feed the future catenary module.</li>
-            <li><b>Materials:</b> PE (generic), HDPE (PE100), MDPE (PE80), steel S355, plus custom materials. Every property carries a source tag (datasheet, standard, by definition, typical, assumption). PE stiffness is short-term; creep is not modelled.</li>
-          </ul>
-
-          <h3>Future coupled system</h3>
-          <p>The modules are separate files with defined interfaces. In V2, catenary/dynamics, hydrodynamics (Morison-type drag and added mass with current profile), vessel offset and 6-DOF motion, and the Fall Pipe ROV (free body, position control, or fixed point only if deliberately selected) only store their inputs. Planned coupling per time step:</p>
-          <ol>
-            <li>Vessel state.</li>
-            <li>Hydrodynamic loads.</li>
-            <li>ROV loads.</li>
-            <li>Lumped-mass catenary step.</li>
-            <li>Bucket offsets and tilts fed back to the DEM geometry.</li>
-            <li>Internal rock mass and wall loads fed back to the catenary.</li>
-          </ol>
-          <p>The rock-flow module is to be validated before any of these couplings are switched on.</p>
-
-          <h3>Major assumptions and limitations</h3>
-          <ul>
-            <li><b>Planar section.</b> Stones move in one plane. Arches in 2D and domes in 3D need different numbers of stones, so thresholds found here do not transfer directly to a round pipe without calibration.</li>
-            <li><b>Water is 1D.</b> Entrained flow, joint leakage, hindrance, pressure gradient and added mass are included as a 1D column model. The velocity profile, turbulence, wakes, clustering, air entrainment and the seabed jet are not; real pressure transients (Chen et al. 2015) need CFD.</li>
-            <li><b>Shape.</b> Where no L/B/T data exist, the shape class mix is an assumption. The batch test has only 5 shape records. Contacts remain rounded, and there is no breakage or abrasion.</li>
-            <li><b>Soft contacts</b> with a clipped material stiffness ratio. Check sensitivity with the Diagnostics buttons.</li>
-            <li><b>Grade curves.</b> Spec-envelope curves are synthetic; only measured masses represent a real batch. Fragments below ELL are not sampled.</li>
-            <li><b>Rigid coaxial string.</b> No catenary, misalignment, vessel motion or ROV in V2.</li>
-            <li><b>Statistics.</b> Probabilities are conditional on the model. They describe how often this model blocks, not how often a real fall pipe will.</li>
-          </ul>
-
-          <h3>Architecture</h3>
-          <pre class="code">js/config.js        defaults, derived quantities (SI)
-js/units.js         unit, magnitude, grade, nesting and material checks
-js/materials.js     material library, Hertz E* contact ratio
-js/grades.js        grade library (T1, T2, S1, B1), envelope and empirical samplers
-js/dataset.js       Excel/CSV extraction and validation, statistics, histograms
-js/shapes.js        mass -> ellipsoid -> orientation -> clump
-js/particles.js     seeded RNG, stone factory and sample statistics
-js/string.js        stacks, buckets, transitions, structural properties, DEM window
-js/geometry.js      DEM window -> wall polygons with materials, axis, features
-js/water.js         water column: entrained flow, joint leakage, hindrance, pressure gradient
-js/physics.js       DEM engine, continuous feed, slot recycling, counters
-js/detection.js     bins, stalled network, bridges, status, run class
-js/checks.js        analytical checks and empirical correlations
-js/stats.js         Wilson intervals, Poisson rate with chi-square bounds, aggregation
-js/study.js         repeated and parametric runs, worker pool
-js/worker.js        headless runner in a Web Worker (same modules)
-js/results.js       run summary, run store
-js/render.js        section view; js/charts.js charts
-js/coupled/*.js     system registry; catenary, hydro, vessel, rov interfaces
-js/ui.js, js/ui-pages.js   dashboard</pre>
-          <h3>Input and output data</h3>
-<pre class="code">Input (mm, kg, t/h, kg/m3, m/s, deg, s, Pa)
-{ pipe: { type, feedLen,
-    string: { nStacks, bucketsPerStack, stacks[{n, type}], jointIns,
-              types[{id, name, dTop, dBot, h, t, ins, mat}], defaultType,
-              overrides{"stack.bucket": {...}}, window{auto, start, count} },
-    inclined: { d, L, angle, angleRef, t, mat } },
-  materials: [{ id, name, rho, E, nu, sAllow, mrs, rough, mu, e, muRoll, src{}, note }],
-  grade: { id, name, family, kind, revision, nominal, limits[{name, mass, Dn, Lmax, Ds, pass}],
-           sieves[], classTable{M50, D50cm[lo,hi], D85D15, Dn50cm}, Mem, rho, bulkDensity,
-           LmaxRatio, shape{LTmean, LTsd, LTmin, LTmax, phi, irregular, measuredSub, src},
-           measured{file, masses[], rows[], ids[], fines, ld[], dims[]},
-           dist{mode, pos, interp, smoothing}, notes },
-  shape: { mode, orient, capL, useMeasured, uniform, dnPerD },
-  feed: { mode, massFlow, partRate, maxStones, v0Mode, v0, opening, offset },
-  physics: { g, fluid, rhoF, cd, muPP, ePP, muRollPP, wallContactFrom, wallStiffMode,
-             Erock, nuRock, kRatioMin, kRatioMax, ktRatio, kMode, overlapPct, vChar,
-             kMassRef, kn, dtMode, tcFactor, dt, capFactor },
-  run: { duration, timeScale, seed }, detect: {...}, checks: {...},
-  system: { catenary{}, hydro{}, vessel{}, rov{} } }
-
-Output (per run)
-{ cls, tBridge, tBlock, massOutBeforeBlock [t 3D eq.], blockLocationGlobal,
-  blockFeature, blockSizes[Dn mm], blockLens[L mm], blockParticles, blockMass,
-  massReleased, massOutTotal, flowRatio, events[], realized{dn10, dn50, dn90, m50},
-  numerics{dt, kn, maxOverlap, cap, capacityWait}, seed }
-Probability (per cell)
-{ n, counts, p{free, restricted, temporary, persistent, atLeast...}{p, lo, hi},
-  exposure, rate{rate, lo, hi}, tBlock{}, massBeforeBlock{}, featCount, rocks{} }</pre>
-
-          <h3>Sources</h3>
-          <ul class="refs">
-            <li>Cundall, P.A. &amp; Strack, O.D.L. (1979). A discrete numerical model for granular assemblies. Géotechnique 29(1), 47-65. <a href="https://doi.org/10.1680/geot.1979.29.1.47" target="_blank" rel="noopener">doi:10.1680/geot.1979.29.1.47</a></li>
-            <li>Review of contact models used in DEM (2025), incl. Schäfer et al. (1996) damping-restitution relation and Hertz-Mindlin E*. <a href="https://arxiv.org/abs/2509.07461" target="_blank" rel="noopener">arXiv:2509.07461</a></li>
-            <li>Ai, J., Chen, J.-F., Rotter, J.M. &amp; Ooi, J.Y. (2011). Assessment of rolling resistance models in discrete element simulations. Powder Technology 206(3), 269-282. <a href="https://pure.qub.ac.uk/en/publications/assessment-of-rolling-resistance-models-in-discrete-element-simul/" target="_blank" rel="noopener">record</a></li>
-            <li>Thomas, C.C. &amp; Durian, D.J. (2015). Fraction of clogging configurations sampled by granular hopper flow. <a href="https://arxiv.org/abs/1410.0933" target="_blank" rel="noopener">arXiv:1410.0933</a></li>
-            <li>Zuriguel, I. et al. (2005). Jamming during the discharge of granular matter from a silo. Phys. Rev. E 71, 051303. <a href="https://arxiv.org/abs/cond-mat/0407761" target="_blank" rel="noopener">arXiv:cond-mat/0407761</a></li>
-            <li>Janda, A., Zuriguel, I., Garcimartín, A., Pugnaloni, L.A. &amp; Maza, D. (2008). Jamming and critical outlet size in the discharge of a two-dimensional silo. EPL 84, 44002. <a href="https://epljournal.edpsciences.org/articles/epl/abs/2008/22/epl11388/epl11388.html" target="_blank" rel="noopener">EPL</a></li>
-            <li>Börzsönyi, T. et al. (2016). Packing, alignment and flow of shape-anisotropic grains in a 3D silo experiment. <a href="https://arxiv.org/abs/1609.02752" target="_blank" rel="noopener">arXiv:1609.02752</a></li>
-            <li>Madrid, M.A., Darias, J.R. &amp; Pugnaloni, L.A. (2017). A differential equation for the flow rate during silo discharge: beyond the Beverloo rule. <a href="https://arxiv.org/abs/1611.05277" target="_blank" rel="noopener">arXiv:1611.05277</a></li>
-            <li>Morison, J.R., O'Brien, M.P., Johnson, J.W. &amp; Schaaf, S.A. (1950). The force exerted by surface waves on piles. Petroleum Transactions AIME 189, 149-154 (drag term used for current loads).</li>
-            <li>DNV-RP-C205, Environmental conditions and environmental loads (current profile and drag coefficients of cylinders).</li>
-            <li>US8628287B2, Fallpipe stone dumping vessel. <a href="https://patents.google.com/patent/US8628287" target="_blank" rel="noopener">Google Patents</a> (fall pipe inclined up to 7 deg while dumping, up to 15 deg in survival mode, for that design).</li>
-            <li>Domokos, G., Jerolmack, D.J., Kun, F. &amp; Török, J. (2020). Plato's cube and the natural geometry of fragmentation. PNAS 117(31), 18178-18185. <a href="https://arxiv.org/abs/1912.04628" target="_blank" rel="noopener">arXiv:1912.04628</a></li>
-            <li>Suhr, B. &amp; Six, K. (2020). Simple particle shapes for DEM simulations of railway ballast: influence of shape descriptors on packing behaviour. Granular Matter 22, 43. <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7093080/" target="_blank" rel="noopener">PMC7093080</a></li>
-            <li>Zingg, T. (1935). Beitrag zur Schotteranalyse. Schweiz. Mineral. Petrogr. Mitt. 15, 39-140 (shape classes from B/L and T/B with limits 2/3).</li>
-            <li>CIRIA, CUR, CETMEF (2007). The Rock Manual, C683, section 3.4.1.6 (block shape, L/T) and EN 13383-1.</li>
-            <li>Miedema, S.A. Slurry Transport, 4.6 Hindered settling (Richardson-Zaki, beta = 2.39 for coarse particles). TU Delft Open Textbook. <a href="https://eng.libretexts.org/Bookshelves/Civil_Engineering/Slurry_Transport_(Miedema)/04%3A_The_Terminal_Settling_Velocity_of_Particles/4.06%3A_Hindered_Settling" target="_blank" rel="noopener">LibreTexts</a></li>
-            <li>Chen, Q. et al. (2015). CFD modelling of fall pipe rock dumping using PICIN. Coastal Sediments 2015. <a href="https://eprints.hrwallingford.com/974/1/HRPP669_CFD_modelling_of_fall_pipe.pdf" target="_blank" rel="noopener">HR Wallingford</a></li>
-            <li>Zuo, M. et al. (2025). Hydrodynamic study of a fall pipe rock dumping system. J. Mar. Sci. Eng. 13(5), 837. <a href="https://www.mdpi.com/2077-1312/13/5/837" target="_blank" rel="noopener">MDPI</a></li>
-            <li>Simulation of fallpipe rock dumping utilizing a multi-phase particle-in-cell (MPPIC)-DEM model, Part I (2023). Applied Ocean Research. <a href="https://www.sciencedirect.com/science/article/abs/pii/S0141118723001955" target="_blank" rel="noopener">ScienceDirect</a></li>
-            <li>prEN 13383-1:2021 Armourstone, Part 1: Characteristics (CEN enquiry draft). Tables 1 to 3. <a href="https://cdn.standards.iteh.ai/samples/72179/9c8894fa3e094dcd882dd6efd32dfd42/oSIST-prEN-13383-1-2021.pdf" target="_blank" rel="noopener">iTeh sample</a></li>
-            <li>Rosin-Rammler interpolation between standard grading limits (CIRIA, CUR, CETMEF 2007), as documented in the breakwater package. <a href="https://breakwater.readthedocs.io/en/latest/material.html" target="_blank" rel="noopener">docs</a></li>
-            <li>SCG Chemicals HDPE H1000PC (PE100) product data. <a href="https://www.scgchemicals.com/en/products-grade/h1000pc" target="_blank" rel="noopener">datasheet</a></li>
-            <li>Morison equation (drag, inertia and added mass on slender bodies), for the future hydro module. <a href="https://en.wikipedia.org/wiki/Morison_equation" target="_blank" rel="noopener">overview</a></li>
-            <li>Di Felice, R. (1994). The voidage function for fluid-particle interaction systems. Int. J. Multiphase Flow 20(1), 153-159; formulation as used in <a href="https://arxiv.org/abs/1603.06808" target="_blank" rel="noopener">arXiv:1603.06808</a></li>
-            <li>Haaland explicit friction factor, as given in the <a href="https://joaobtj.r-universe.dev/hf/doc/friction-en.html" target="_blank" rel="noopener">hf package documentation</a></li>
-            <li>Janda, A., Zuriguel, I., Garcimartín, A. &amp; Maza, D. (2015). Clogging of granular materials in narrow vertical pipes discharged at constant velocity. Granular Matter. <a href="https://www.researchgate.net/publication/281202100_Clogging_of_granular_materials_in_narrow_vertical_pipes_discharged_at_constant_velocity" target="_blank" rel="noopener">record</a></li>
-            <li>Zhou et al. (2025). Clogging-flowing transition of granular media in a two-dimensional vertical pipe. <a href="https://arxiv.org/html/2505.16469" target="_blank" rel="noopener">arXiv:2505.16469</a></li>
-            <li>To, K. et al. (2001). Jamming of granular flow in a two-dimensional hopper. Phys. Rev. Lett. 86, 71. <a href="https://physics.aps.org/story/v6/st29" target="_blank" rel="noopener">APS summary</a></li>
-            <li>Arévalo, R. &amp; Zuriguel, I. (2016). Clogging of granular materials in silos: effect of gravity and outlet size. Soft Matter. <a href="https://pubs.rsc.org/en/content/articlehtml/2016/sm/c5sm01599e" target="_blank" rel="noopener">RSC</a></li>
-            <li>Koivisto, J. &amp; Durian, D.J. (2017). Effect of interstitial fluid on the fraction of flow microstates that precede clogging in granular hoppers. <a href="https://arxiv.org/abs/1701.02985" target="_blank" rel="noopener">arXiv:1701.02985</a></li>
-            <li>IADC, Fall pipe vessels. <a href="https://www.iadc-dredging.com/subject/equipment/fall-pipe-vessels/" target="_blank" rel="noopener">IADC</a>; DEME Flintstone. <a href="https://www.deme-group.com/technologies/flintstone" target="_blank" rel="noopener">DEME</a></li>
-            <li>Wilson score interval for binomial proportions. <a href="https://metricgate.com/docs/wilson-score-interval/" target="_blank" rel="noopener">reference</a></li>
-          </ul>
+          <h3>Probability tab</h3>
+          <p>Each cell is one rock grade (row) and one value of the varied parameter (column), run with as many seeds as you set, headless in background workers (one per CPU core less one). Result per cell: share of runs with persistent blockage and with any dome, 95 % Wilson intervals, Poisson blockage rate per 1000 t discharged, time and rock discharged before blockage, where it blocks, the stones in the blocking dome, wall impacts. Replay sends any run with its seed to the Simulate tab. For pipe size against rock size, tick the grades and vary the bucket bottom ID (or bottom with the top ID scaled). Use the same seeds, duration and precision for every cell you compare.</p>
+          <h3>Performance</h3>
+          <p>The engine sorts stones along the axis every step and only tests pairs whose bounding spheres overlap. At High precision the time step is about 3x smaller than Standard. Expect near real time with a few stones in the window and 0.1x to 0.3x with 40 to 60 stones on a laptop; the Probability tab runs several such runs in parallel.</p>
         </div>
       </div>
     </section>
@@ -829,6 +546,7 @@ Probability (per cell)
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="js/coupled/system.js"></script>
 <script src="js/coupled/catenary.js"></script>
 <script src="js/coupled/hydro.js"></script>
@@ -843,19 +561,26 @@ Probability (per cell)
 <script src="js/units.js"></script>
 <script src="js/geometry.js"></script>
 <script src="js/water.js"></script>
-<script src="js/physics.js"></script>
 <script src="js/detection.js"></script>
 <script src="js/results.js"></script>
-<script src="js/stats.js"></script>
 <script src="js/checks.js"></script>
-<script src="js/dataset.js"></script>
-<script src="js/render.js"></script>
+<script src="js/stats.js"></script>
 <script src="js/charts.js"></script>
-<script src="js/study.js"></script>
 <script src="js/admin-config.js"></script>
 <script src="js/admin.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/ui-pages.js"></script>
-
+<script src="js3d/shapes3d.js"></script>
+<script src="js3d/particles3d.js"></script>
+<script src="js3d/geometry3d.js"></script>
+<script src="js3d/config3d.js"></script>
+<script src="js3d/physics3d.js"></script>
+<script src="js3d/detection3d.js"></script>
+<script src="js3d/extra3d.js"></script>
+<script src="js3d/runner3d.js"></script>
+<script src="js3d/bench3d.js"></script>
+<script src="js3d/study3d.js"></script>
+<script src="js3d/render3d.js"></script>
+<script src="js3d/ui3d.js"></script>
+<script src="js3d/report3d.js"></script>
+<script src="js3d/prob3d.js"></script>
 </body>
 </html>
