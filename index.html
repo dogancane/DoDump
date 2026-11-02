@@ -582,5 +582,16 @@ table.matrix td.selc { outline: 2px solid var(--accent); outline-offset: -2px; }
 <script src="js3d/ui3d.js"></script>
 <script src="js3d/report3d.js"></script>
 <script src="js3d/prob3d.js"></script>
+<script>
+(function () {
+  var FP = self.FP || {}, need = { 'js/config.js': FP.config, 'js/grades.js': FP.grades, 'js/stats.js': FP.stats, 'js/charts.js': FP.charts, 'js3d/config3d.js': FP.config3d, 'js3d/physics3d.js': FP.physics3d, 'js3d/detection3d.js': FP.detection3d, 'js3d/extra3d.js': FP.extra3d, 'js3d/study3d.js': FP.study3d, 'js3d/report3d.js': FP.report3d, 'js3d/ui3d.js': FP.ui };
+  var miss = Object.keys(need).filter(function (k) { return !need[k]; });
+  if (miss.length) {
+    var p = document.createElement('p'); p.className = 'msg err'; p.style.margin = '8px';
+    p.textContent = 'These files did not load: ' + miss.join(', ') + '. Check that they are in the repository with exactly these names and folders.';
+    var host = document.getElementById('inputs') || document.body; host.insertBefore(p, host.firstChild);
+  }
+})();
+</script>
 </body>
 </html>
