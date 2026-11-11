@@ -535,7 +535,9 @@
   function bgTick() {
     const now = performance.now();
     if (S.state !== 'running') { bgStop(); return; }
-    if (now - BG.lastRaf < 250) return;     // frames are running: the normal loop does the work
+    // frames are running: the normal loop does the work. A slow frame in a visible tab (small grades,
+    // slow GPU) must not hand the work to this clock, or physics crowds out drawing and the view stalls.
+    if (!document.hidden && now - BG.lastRaf < 2000) return;
     if (!BG.from) BG.from = { t: S.eng.t, wall: Date.now() };
     advance(now, 40, 0.25);
     if (now - BG.lastTitle > 1000) {

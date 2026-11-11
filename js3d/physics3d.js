@@ -66,7 +66,7 @@
     this.vx = F(N); this.vy = F(N); this.vz = F(N);
     this.qw = F(N); this.qx = F(N); this.qy = F(N); this.qz = F(N);
     this.wx = F(N); this.wy = F(N); this.wz = F(N);
-    this.R = F(9 * N); this.Ib = F(3 * N); this.half = F(3 * N);
+    this.R = F(9 * N); this.Ib = F(3 * N); this.half = F(3 * N); this.hbx = F(3 * N);   // hbx: box around the sphere clump, body frame
     this.m = F(N); this.invM = F(N);
     this.d = F(N); this.rn = F(N); this.L = F(N); this.Bd = F(N); this.Td = F(N); this.br = F(N); this.vol = F(N); this.aDrag = F(N);
     this.deq = F(N); this.kS = F(N); this.kNw = F(N); this.kNa = F(N);
@@ -86,6 +86,11 @@
     this.sox = F(SC); this.soy = F(SC); this.soz = F(SC); this.sr = F(SC);
     this.sx = F(SC); this.sy = F(SC); this.sz = F(SC);
     this.sb = new Int32Array(SC); this.cellOf = new Int32Array(SC); this.next = new Int32Array(SC);
+    this.sphStamp = new Int32Array(N); this.LB = new Int32Array(MAXS);
+    // Verlet pair list: skin 5 % of Dn50 (at least 5 mm); positions at the last build
+    this.vlSkin = Math.max(0.005, 0.05 * (dv.d50 || 0.1)); this.vlNeed = true; this.vlMove2 = 0;
+    this.vlX = F(N); this.vlY = F(N); this.vlZ = F(N);
+    this.nbA = new Int32Array(N * 8); this.nbB = new Int32Array(N * 8); this.nbN = 0; this.vlBuilds = 0;
     for (let q = 0; q < SC; q++) this.sb[q] = (q / MAXS) | 0;
 
     // contact record (body pairs) for the detector
@@ -144,6 +149,14 @@
       zl.push(Int32Array.from(list));
     }
     this.zSegs = zl;
+    // smallest wall radius per layer (gate excluded): a stone whose bounding sphere stays inside it
+    // touches no wall, so its spheres skip the wall test (most stones in a dense stream)
+    this.cellRin = new Float64Array(this.nz); this.cellRinG = new Float64Array(this.nz);
+    for (let k = 0; k < this.nz; k++) {
+      let a = Infinity, g = Infinity;
+      zl[k].forEach(q => { const r = Math.min(S[q].r1, S[q].r2); if (S[q].gate) g = Math.min(g, r); else a = Math.min(a, r); });
+      this.cellRin[k] = a; this.cellRinG[k] = Math.min(a, g);
+    }
 
     // tangential spring history: K slots per sub-sphere, 3 components, double buffered
     this.K = 12;
@@ -404,15 +417,46 @@
     this.serial[b] = this.nextSerial++;
     const n = Math.min(MAXS, p.subs.length), o = b * MAXS;
     this.subCount[b] = n;
+    let ex0 = 0, ex1 = 0, ex2 = 0;
     for (let i = 0; i < n; i++) {
       const s = p.subs[i];
       this.sox[o + i] = s[0]; this.soy[o + i] = s[1]; this.soz[o + i] = s[2]; this.sr[o + i] = s[3];
       this.hCntO[o + i] = 0;
+      ex0 = Math.max(ex0, Math.abs(s[0]) + s[3]); ex1 = Math.max(ex1, Math.abs(s[1]) + s[3]); ex2 = Math.max(ex2, Math.abs(s[2]) + s[3]);
     }
+    this.hbx[3 * b] = ex0; this.hbx[3 * b + 1] = ex1; this.hbx[3 * b + 2] = ex2;
     if (p.capped) this.cappedStones++;
     this.spawned++; this.spawnedMass += p.m; this.feedMass += p.m;
     this.active[this.nActive++] = b; this.ordDirty = true;
     if (this.nActive > this.peakBodies) this.peakBodies = this.nActive;
+  };
+
+  /** Body pairs whose bounding spheres are within the skin, by an axial sweep (pipe is long and narrow). */
+  Engine.prototype.buildPairs = function () {
+    if (this.dirty) this.rebuildActive();
+    const act = this.active, nAct = this.nActive, ord = this.ord, px = this.px, py = this.py, pz = this.pz, br = this.br, sk = this.vlSkin;
+    if (this.ordDirty) { ord.set(act.subarray(0, nAct)); this.ordDirty = false; }
+    let maxBr = 0;
+    for (let k = 0; k < nAct; k++) { const b = act[k]; if (br[b] > maxBr) maxBr = br[b]; this.vlX[b] = px[b]; this.vlY[b] = py[b]; this.vlZ[b] = pz[b]; }
+    for (let i = 1; i < nAct; i++) {   // insertion sort by axial position (nearly sorted from the last build)
+      const v = ord[i], z = pz[v]; let j = i - 1;
+      while (j >= 0 && pz[ord[j]] > z) { ord[j + 1] = ord[j]; j--; }
+      ord[j + 1] = v;
+    }
+    let n = 0;
+    for (let i = 0; i < nAct; i++) {
+      const P0 = ord[i], zP = pz[P0], lim = br[P0] + maxBr + sk;
+      for (let j = i + 1; j < nAct; j++) {
+        const Q0 = ord[j];
+        if (pz[Q0] - zP > lim) break;
+        const A = P0 < Q0 ? P0 : Q0, B = P0 < Q0 ? Q0 : P0;
+        const ex = px[B] - px[A], ey = py[B] - py[A], ez = pz[B] - pz[A], RR = br[A] + br[B] + sk;
+        if (ex * ex + ey * ey + ez * ez >= RR * RR) continue;
+        if (n >= this.nbA.length) { const a2 = new Int32Array(2 * n), b2 = new Int32Array(2 * n); a2.set(this.nbA); b2.set(this.nbB); this.nbA = a2; this.nbB = b2; }
+        this.nbA[n] = A; this.nbB[n] = B; n++;
+      }
+    }
+    this.nbN = n; this.vlNeed = false; this.vlMove2 = 0; this.vlBuilds++;
   };
 
   Engine.prototype.kill = function (b) {
@@ -426,7 +470,7 @@
     if (!this.gateOpen && this.t >= this.settleTime) this.gateOpen = true;
     if (this.gateOpen) this.spawn();
     if (this.dirty) this.rebuildActive();
-    if (this.ordDirty) { this.ord.set(this.active.subarray(0, this.nActive)); this.ordDirty = false; }
+    if (this.ordDirty) { this.ord.set(this.active.subarray(0, this.nActive)); this.ordDirty = false; this.vlNeed = true; }
 
     const px = this.px, py = this.py, pz = this.pz, vx = this.vx, vy = this.vy, vz = this.vz;
     const wx = this.wx, wy = this.wy, wz = this.wz, Rm = this.R;
@@ -449,23 +493,31 @@
       VM.hz = 1 - VS.wh * VS.wh * VM.heave / gg;                             // (g + h'') / g, heave up positive
     }
 
-    // 1. orientation, sphere positions, grid, body forces
+    // sphere world positions are computed on demand, only for stones near another stone or a wall
+    // (a stone in free fall needs none); stamp = step number of the last update
+    const stamp = this.sphStamp, sid = this.steps + 1;
+    const ensure = (b) => {
+      if (stamp[b] === sid) return;
+      stamp[b] = sid;
+      const r9 = 9 * b, s0 = b * MAXS, s1 = s0 + subCount[b];
+      const R0 = Rm[r9], R1 = Rm[r9 + 1], R2 = Rm[r9 + 2], R3 = Rm[r9 + 3], R4 = Rm[r9 + 4], R5 = Rm[r9 + 5], R6 = Rm[r9 + 6], R7 = Rm[r9 + 7], R8 = Rm[r9 + 8];
+      const X0 = px[b], Y0 = py[b], Z0 = pz[b];
+      for (let q = s0; q < s1; q++) {
+        const ox = sox[q], oy = soy[q], oz = soz[q];
+        const Z = Z0 + R6 * ox + R7 * oy + R8 * oz;
+        sx[q] = X0 + R0 * ox + R1 * oy + R2 * oz; sy[q] = Y0 + R3 * ox + R4 * oy + R5 * oz; sz[q] = Z;
+        const ck = Math.floor((Z - gz0) * inv);
+        cellOf[q] = ck < 0 || ck >= nz ? -1 : ck;    // axial layer, for the wall list
+      }
+    };
+
+    // 1. orientation, body forces
     for (let k = 0; k < nAct; k++) {
       const b = act[k], r9 = 9 * b;
       const qw = this.qw[b], qx = this.qx[b], qy = this.qy[b], qz = this.qz[b];
       Rm[r9] = 1 - 2 * (qy * qy + qz * qz); Rm[r9 + 1] = 2 * (qx * qy - qw * qz); Rm[r9 + 2] = 2 * (qx * qz + qw * qy);
       Rm[r9 + 3] = 2 * (qx * qy + qw * qz); Rm[r9 + 4] = 1 - 2 * (qx * qx + qz * qz); Rm[r9 + 5] = 2 * (qy * qz - qw * qx);
       Rm[r9 + 6] = 2 * (qx * qz - qw * qy); Rm[r9 + 7] = 2 * (qy * qz + qw * qx); Rm[r9 + 8] = 1 - 2 * (qx * qx + qy * qy);
-      const s0 = b * MAXS, s1 = s0 + subCount[b];
-      for (let q = s0; q < s1; q++) {
-        const ox = sox[q], oy = soy[q], oz = soz[q];
-        const X = px[b] + Rm[r9] * ox + Rm[r9 + 1] * oy + Rm[r9 + 2] * oz;
-        const Y = py[b] + Rm[r9 + 3] * ox + Rm[r9 + 4] * oy + Rm[r9 + 5] * oz;
-        const Z = pz[b] + Rm[r9 + 6] * ox + Rm[r9 + 7] * oy + Rm[r9 + 8] * oz;
-        sx[q] = X; sy[q] = Y; sz[q] = Z;
-        const ck = Math.floor((Z - gz0) * inv);
-        cellOf[q] = ck < 0 || ck >= nz ? -1 : ck;    // axial layer, for the wall list
-      }
       const sAx = pz[b];
       const isWet = dragK > 0 && WT.wetAt(sAx) ? 1 : 0;
       const jw = WT.bin(sAx);
@@ -513,7 +565,7 @@
         if (W > 1e-9) {
           const rho = isWet ? this.rhoF : this.rhoA, mu = isWet ? this.muW : this.muA, r = 0.5 * this.deq[b];
           const Rer = rho * r * r * W / mu, CR = 12.9 / Math.sqrt(Rer) + 128.4 / Rer;
-          const Tm = 0.5 * rho * CR * Math.pow(r, 5) * W;
+          const r2 = r * r, Tm = 0.5 * rho * CR * r2 * r2 * r * W;
           rx[b] = -Tm * wx[b]; ry[b] = -Tm * wy[b]; rz[b] = -Tm * wz[b];   // dissipative: may stop the spin, never reverse it
         }
       }
@@ -541,28 +593,43 @@
     //    then sphere pairs. Body A always has the lower slot index, so sphere a < sphere b and the
     //    friction history of the pair is stored once, at sphere a.
     {
-      const cn0 = this.cnPP, ct0 = this.ctPP, mu = this.muPP, mr = this.mrPP, br = this.br, ord = this.ord;
-      let maxBr = 0;
-      for (let k = 0; k < nAct; k++) if (br[act[k]] > maxBr) maxBr = br[act[k]];
-      // insertion sort by axial position (nearly sorted from the previous step)
-      for (let i = 1; i < nAct; i++) {
-        const v = ord[i], z = pz[v]; let j = i - 1;
-        while (j >= 0 && pz[ord[j]] > z) { ord[j + 1] = ord[j]; j--; }
-        ord[j + 1] = v;
-      }
-      for (let i = 0; i < nAct; i++) {
-        const P0 = ord[i], zP = pz[P0], lim = br[P0] + maxBr;
-        for (let j = i + 1; j < nAct; j++) {
-          const Q0 = ord[j];
-          if (pz[Q0] - zP > lim) break;
-          const A = P0 < Q0 ? P0 : Q0, B = P0 < Q0 ? Q0 : P0;
+      const cn0 = this.cnPP, ct0 = this.ctPP, mu = this.muPP, mr = this.mrPP, br = this.br, ord = this.ord, hbx = this.hbx, LB = this.LB;
+      // Verlet neighbour list of body pairs: bounding spheres within a skin; rebuilt when the active
+      // set changed or a stone moved more than half the skin since the last build (exact: no contact missed)
+      if (this.vlNeed || this.vlMove2 > 0.25 * this.vlSkin * this.vlSkin) this.buildPairs();
+      const nbA = this.nbA, nbB = this.nbB, nbN = this.nbN;
+      for (let e = 0; e < nbN; e++) {
+        {
+          const A = nbA[e], B = nbB[e];
           const ex = px[B] - px[A], ey = py[B] - py[A], ez = pz[B] - pz[A], RR = br[A] + br[B];
           if (ex * ex + ey * ey + ez * ez >= RR * RR) continue;
-          const sA0 = A * MAXS, sA1 = sA0 + subCount[A], sB0 = B * MAXS, sB1 = sB0 + subCount[B], brB = br[B];
-          for (let a = sA0; a < sA1; a++) {
-            const qx0 = px[B] - sx[a], qy0 = py[B] - sy[a], qz0 = pz[B] - sz[a], rq = sr[a] + brB;
-            if (qx0 * qx0 + qy0 * qy0 + qz0 * qz0 >= rq * rq) continue;
+          ensure(A); ensure(B);
+          const sA0 = A * MAXS, sA1 = sA0 + subCount[A], sB0 = B * MAXS, sB1 = sB0 + subCount[B];
+          // spheres of B that reach the clump box of A (exact filter: every sphere of A is inside that box)
+          let nLB = 0;
+          {
+            const r9 = 9 * A, h3 = 3 * A, X0 = px[A], Y0 = py[A], Z0 = pz[A];
+            const R0 = Rm[r9], R1 = Rm[r9 + 1], R2 = Rm[r9 + 2], R3 = Rm[r9 + 3], R4 = Rm[r9 + 4], R5 = Rm[r9 + 5], R6 = Rm[r9 + 6], R7 = Rm[r9 + 7], R8 = Rm[r9 + 8];
+            const H0 = hbx[h3], H1 = hbx[h3 + 1], H2 = hbx[h3 + 2];
             for (let b = sB0; b < sB1; b++) {
+              const dx = sx[b] - X0, dy = sy[b] - Y0, dz = sz[b] - Z0, r = sr[b];
+              if (Math.abs(R0 * dx + R3 * dy + R6 * dz) >= H0 + r) continue;
+              if (Math.abs(R1 * dx + R4 * dy + R7 * dz) >= H1 + r) continue;
+              if (Math.abs(R2 * dx + R5 * dy + R8 * dz) >= H2 + r) continue;
+              LB[nLB++] = b;
+            }
+          }
+          if (!nLB) continue;
+          const r9b = 9 * B, h3b = 3 * B, XB = px[B], YB = py[B], ZB = pz[B];
+          const U0 = Rm[r9b], U1 = Rm[r9b + 1], U2 = Rm[r9b + 2], U3 = Rm[r9b + 3], U4 = Rm[r9b + 4], U5 = Rm[r9b + 5], U6 = Rm[r9b + 6], U7 = Rm[r9b + 7], U8 = Rm[r9b + 8];
+          const G0 = hbx[h3b], G1 = hbx[h3b + 1], G2 = hbx[h3b + 2];
+          for (let a = sA0; a < sA1; a++) {
+            const qx0 = sx[a] - XB, qy0 = sy[a] - YB, qz0 = sz[a] - ZB, ra = sr[a];
+            if (Math.abs(U0 * qx0 + U3 * qy0 + U6 * qz0) >= G0 + ra) continue;
+            if (Math.abs(U1 * qx0 + U4 * qy0 + U7 * qz0) >= G1 + ra) continue;
+            if (Math.abs(U2 * qx0 + U5 * qy0 + U8 * qz0) >= G2 + ra) continue;
+            for (let ib = 0; ib < nLB; ib++) {
+              const b = LB[ib];
               const dx = sx[b] - sx[a], dy = sy[b] - sy[a], dz = sz[b] - sz[a], Rs = sr[a] + sr[b];
               const d2 = dx * dx + dy * dy + dz * dz;
               if (d2 >= Rs * Rs || d2 === 0) continue;
@@ -627,10 +694,19 @@
     {
       const ws1 = this.ws1, wr1 = this.wr1, wes = this.wes, wer = this.wer, wl2 = this.wl2, wrMin = this.wrMin, wrMax = this.wrMax;
       const wMu = this.wMu, wCn = this.wCn, wCt = this.wCt, wK = this.wK, wMr = this.wMr, zSegs = this.zSegs, wGate = this.wGate, gateOpen = this.gateOpen;
-      const sect = NSECT / (2 * Math.PI);
+      const sect = NSECT / (2 * Math.PI), cRin = gateOpen ? this.cellRin : this.cellRinG, brA = this.br;
       for (let k = 0; k < nAct; k++) {
         const A = act[k];
         const s0 = A * MAXS, s1 = s0 + subCount[A];
+        {   // body cull: bounding sphere inside the smallest wall radius of every layer it spans
+          const rb = brA[A], ext = Math.sqrt(px[A] * px[A] + py[A] * py[A]) + rb;
+          let k0 = Math.floor((pz[A] - rb - gz0) * inv), k1 = Math.floor((pz[A] + rb - gz0) * inv);
+          if (k0 < 0) k0 = 0; if (k1 >= nz) k1 = nz - 1;
+          let clear = k0 <= k1;
+          for (let c = k0; c <= k1 && clear; c++) if (ext >= cRin[c]) clear = false;
+          if (clear) continue;
+        }
+        ensure(A);
         for (let a = s0; a < s1; a++) {
           const cell = cellOf[a];
           if (cell < 0) continue;
@@ -712,11 +788,13 @@
     // 4. integrate: translation, rotation (Euler's equations in the body frame), bookkeeping
     const invM = this.invM, Ib = this.Ib, g = this.geom, bx = g.box, r2box = bx.r * bx.r;
     const L = g.L, exitS = g.exitS, t1 = this.t + dt;
-    let spin = 0;
+    let spin = 0, move2 = 0;
+    const vlX = this.vlX, vlY = this.vlY, vlZ = this.vlZ;
     for (let k = 0; k < nAct; k++) {
       const b = act[k], r9 = 9 * b, i3 = 3 * b;
       vx[b] += fx[b] * invM[b] * dt; vy[b] += fy[b] * invM[b] * dt; vz[b] += fz[b] * invM[b] * dt;
       px[b] += vx[b] * dt; py[b] += vy[b] * dt; pz[b] += vz[b] * dt;
+      { const dx = px[b] - vlX[b], dy = py[b] - vlY[b], dz = pz[b] - vlZ[b], d2 = dx * dx + dy * dy + dz * dz; if (d2 > move2) move2 = d2; }
       // body-frame spin and torque
       const R0 = Rm[r9], R1 = Rm[r9 + 1], R2 = Rm[r9 + 2], R3 = Rm[r9 + 3], R4 = Rm[r9 + 4], R5 = Rm[r9 + 5], R6 = Rm[r9 + 6], R7 = Rm[r9 + 7], R8 = Rm[r9 + 8];
       const I1 = Ib[i3], I2 = Ib[i3 + 1], I3 = Ib[i3 + 2];
@@ -762,7 +840,7 @@
         this.kill(b);
       }
     }
-    this.maxSpin = Math.sqrt(spin);
+    this.maxSpin = Math.sqrt(spin); this.vlMove2 = move2;
 
     this.hIdO = hIdN; this.hValO = hValN; this.hCntO = hCntN;
     this.hIdN = hIdO; this.hValN = hValO; this.hCntN = hCntO;

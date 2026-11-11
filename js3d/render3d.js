@@ -313,8 +313,16 @@
         this.extras.add(ar);
       }
     }
-    I.block.count = nB; I.round.count = nR; I.sph.count = nS;
-    [I.block, I.round, I.sph].forEach(m => { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; });
+    // upload only the instances in use: the buffers hold the full stone capacity (up to 4000 stones,
+    // 96 000 contact spheres), and sending all of it every frame stalls the GPU with small grades
+    const upd = (m, n) => {
+      const was = m.count; m.count = n;
+      if (!n && !was) return;
+      const k = Math.max(n, was, 1);
+      m.instanceMatrix.updateRange.offset = 0; m.instanceMatrix.updateRange.count = 16 * k; m.instanceMatrix.needsUpdate = true;
+      if (m.instanceColor) { m.instanceColor.updateRange.offset = 0; m.instanceColor.updateRange.count = 3 * k; m.instanceColor.needsUpdate = true; }
+    };
+    upd(I.block, nB); upd(I.round, nR); upd(I.sph, nS);
     this.render();
   };
 

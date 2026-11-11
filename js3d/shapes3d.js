@@ -345,7 +345,8 @@
   function bbCd(Re, kS, kN) {
     Re = Math.min(Math.max(Re, 1e-6), 3e5);
     const x = Re * kN / kS;
-    return 24 * kS / Re * (1 + 0.125 * Math.pow(x, 2 / 3)) + 0.46 * kN / (1 + 5330 / x);
+    const c = Math.cbrt(x);
+    return 24 * kS / Re * (1 + 0.125 * c * c) + 0.46 * kN / (1 + 5330 / x);
   }
 
   function describe(S, g) {
